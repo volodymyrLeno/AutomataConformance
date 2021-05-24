@@ -57,7 +57,14 @@ import javax.swing.plaf.synth.SynthEditorPaneUI;
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		FastList<String> paths = new FastList<>();
+		String filePath = "C:/Volodymyr/diagram10.bpmn";
+		ImportProcessModel ipm = new ImportProcessModel();
+
+		ipm.createAutomatonFromPNMLorBPMNFile(filePath,null,null);
+		System.out.println();
+
+
+		/*FastList<String> paths = new FastList<>();
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/");
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/SM/");
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/private/IM/");
@@ -74,10 +81,17 @@ public class Main {
 			if(path.contains("public")) models = publicModels;
 			else models = privateModels;
 			for(int i : models.toArray())
-			{
+			{*/
+
+
+
 				//System.out.println(path + " - " + i);
-				log = i + ".xes.gz";
-				model = i + ".pnml";
+
+
+				//log = i + ".xes.gz";
+				//model = i + ".pnml";
+
+
 				//if(((i==13||i==15) && path=="/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/") || (i==2 && path=="/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/private/IM/") ) continue;
 				//TRImporter stats = new TRImporter(path, log, model);
 				//stats.recordStatistics();
@@ -88,12 +102,14 @@ public class Main {
 				//TRImporter importer = new TRImporter(path, log, model);
 				//importer.createAutomata();
 				//importer.gatherTRStatistics();
-				DecomposingConformanceImporter importer = new DecomposingConformanceImporter();
+
+
+				/*DecomposingConformanceImporter importer = new DecomposingConformanceImporter();
 				importer.importAndDecomposeModelForStatistics(path, model);
 				if(importer.scompRGSizeBeforeTauRemoval.isEmpty()) importer.scompRGSizeBeforeTauRemoval.add(0);
-				System.out.println(importer.scompRGSizeBeforeTauRemoval.average());
-			}
-		}
+				System.out.println(importer.scompRGSizeBeforeTauRemoval.average());*/
+			//}
+		//}
 
 		/*String path = "/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/";
 		String log = "4.xes.gz";

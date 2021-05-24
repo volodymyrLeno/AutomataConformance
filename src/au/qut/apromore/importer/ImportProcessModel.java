@@ -371,6 +371,12 @@ public class ImportProcessModel
 			Collection<String> elements = parameters.getDiagram().getElements();
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
+
+		/* CODE GOES HERE */
+
+		BPMNtoFSMConverter bpmNtoFSMConverter = new BPMNtoFSMConverter();
+		bpmNtoFSMConverter.BPMNtoFSM(newDiagram);
+
 		Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
 		Petrinet pnet = (Petrinet) object[0];
 		
@@ -386,6 +392,10 @@ public class ImportProcessModel
 		context.addConnection(new FinalMarkingConnection(pnet, (Marking) object[2]));
 		object = new TSGenerator().calculateTS(context, pnet, initialMarking);
 		ReachabilityGraph pnet_rg = (ReachabilityGraph) object [0];
+
+		/* CODE ENDS HERE */
+
+
 		//new TsmlExportTS().export(context, pnet_rg, new File(fileName + ".tsml"));
 		model = convertReachabilityGraphToFSM(pnet, pnet_rg, eventLabelMapping, inverseEventLabelMapping);
 		long modelTime = System.nanoTime();
