@@ -206,7 +206,8 @@ public class ImportProcessModel
 			return createFSMfromPNMLFile(fileName, eventLabelMapping, inverseEventLabelMapping);
 		}
 		else if(extension.equals(".bpmn")) {
-			return createFSMfromBPNMFileWithConversion(fileName,eventLabelMapping,inverseEventLabelMapping);
+			return createFSMfromBPMNFile(fileName, eventLabelMapping, inverseEventLabelMapping);
+			//return createFSMfromBPNMFileWithConversion(fileName,eventLabelMapping,inverseEventLabelMapping);
 		}
 		else throw new Exception("Wrong filetype - Only .pnml or .bpmn process models are supported");
 
@@ -356,7 +357,7 @@ public class ImportProcessModel
 	}
 
 	public au.qut.apromore.automaton.Automaton createFSMfromBPNMFileWithConversion(String fileName, BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping) throws Exception
-	{	
+	{
 		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
 		long start = System.nanoTime();
 		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
@@ -371,31 +372,21 @@ public class ImportProcessModel
 			Collection<String> elements = parameters.getDiagram().getElements();
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
-
-		/* CODE GOES HERE */
-
-		BPMNtoFSMConverter bpmNtoFSMConverter = new BPMNtoFSMConverter();
-		bpmNtoFSMConverter.BPMNtoFSM(newDiagram);
-
 		Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
 		Petrinet pnet = (Petrinet) object[0];
-		
+
 		int count = 1;
 		for(Place p : pnet.getPlaces()) {
 			if(p.getLabel().isEmpty()) {
 				p.getAttributeMap().put(AttributeMap.LABEL, "_empty_" + count++);
 			}
 		}
-		
+
 		Marking initialMarking = (Marking) object[1];
 		context.addConnection(new InitialMarkingConnection(pnet, initialMarking));
 		context.addConnection(new FinalMarkingConnection(pnet, (Marking) object[2]));
 		object = new TSGenerator().calculateTS(context, pnet, initialMarking);
 		ReachabilityGraph pnet_rg = (ReachabilityGraph) object [0];
-
-		/* CODE ENDS HERE */
-
-
 		//new TsmlExportTS().export(context, pnet_rg, new File(fileName + ".tsml"));
 		model = convertReachabilityGraphToFSM(pnet, pnet_rg, eventLabelMapping, inverseEventLabelMapping);
 		long modelTime = System.nanoTime();
@@ -526,7 +517,136 @@ public class ImportProcessModel
 		return model;
 	}
 
+	/* ############ MY CODE STARTS ############ */
 
+	public au.qut.apromore.automaton.Automaton createFSMfromBPMNFile(String fileName, BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping) throws Exception
+	{
+		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
+		long start = System.nanoTime();
+		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
+		@SuppressWarnings("unused")
+		BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+		BPMNDiagram newDiagram = BPMNDiagramFactory.newBPMNDiagram("");
+		Map<String, BPMNNode> id2node = new HashMap<String, BPMNNode>();
+		Map<String, Swimlane> id2lane = new HashMap<String, Swimlane>();
+		if (parameters.getDiagram() == BpmnSelectDiagramParameters.NODIAGRAM) {
+			bpmn.unmarshall(newDiagram, id2node, id2lane);
+		} else {
+			Collection<String> elements = parameters.getDiagram().getElements();
+			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
+		}
+
+		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
+		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(newDiagram);
+		model = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
+		long modelTime = System.nanoTime();
+		System.out.println("Model automaton creation: " + TimeUnit.MILLISECONDS.convert((modelTime - start), TimeUnit.NANOSECONDS) + "ms");
+		return model;
+	}
+
+	public au.qut.apromore.automaton.Automaton convertReachabilityGraphToFSM(ReachabilityGraph pnet_rg, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping) throws IOException
+	{
+		au.qut.apromore.automaton.State.UNIQUE_ID = 0;
+		int iEvent;
+		this.stateLabelMapping = HashBiMap.create();
+		if(eventLabels==null)
+		{
+			iEvent = 0;
+			this.eventLabelMapping = HashBiMap.create();
+		}
+		else
+		{
+			iEvent = eventLabels.size()+1;
+			this.eventLabelMapping = HashBiMap.create(eventLabels);
+		}
+		if(inverseEventLabelMapping==null) {
+			this.inverseEventLabelMapping = HashBiMap.create();
+			this.globalInverseLabels.put("tau",skipEvent);
+		}
+		else
+		{
+			this.inverseEventLabelMapping = HashBiMap.create(inverseEventLabelMapping);
+			this.globalInverseLabels.putAll(inverseEventLabelMapping);
+			if(!this.globalInverseLabels.containsKey("tau"))
+				this.globalInverseLabels.put("tau",skipEvent);
+		}
+		this.stateMapping = HashBiMap.create();
+		this.transitionMapping = HashBiMap.create();
+
+		this.finalStates = new IntHashSet();
+
+		IntHashSet modelEventLabels = new IntHashSet();
+		Integer rkey;
+		au.qut.apromore.automaton.State state;
+		au.qut.apromore.automaton.State source;
+		au.qut.apromore.automaton.State target;
+		au.qut.apromore.automaton.Transition transition;
+		UnifiedSet invLabels = new UnifiedSet();
+		for (State s : pnet_rg.getNodes())
+		{
+			if(!this.stateMapping.containsKey(this.stateLabelMapping.get(s.getLabel())))
+			{
+				state = new au.qut.apromore.automaton.State(s.getLabel(),
+						s.getGraph().getInEdges(s).isEmpty(), s.getGraph().getOutEdges(s).isEmpty());
+				this.stateMapping.put(state.id(), state);
+				this.stateLabelMapping.put(s.getLabel(), state.id());
+				if(state.isSource() && iSource==0){iSource=state.id();}
+				if(state.isFinal()){this.finalStates.add(state.id());}
+			}
+
+			for(Transition t : s.getGraph().getOutEdges(s))
+			{
+				if(!this.stateMapping.containsKey(this.stateLabelMapping.get(t.getTarget().getLabel())))
+				{
+					state = new au.qut.apromore.automaton.State(t.getTarget().getLabel(),
+							t.getGraph().getInEdges(t.getTarget()).isEmpty(), t.getGraph().getOutEdges(t.getTarget()).isEmpty());
+					this.stateMapping.put(state.id(), state);
+					this.stateLabelMapping.put(t.getTarget().getLabel(), state.id());
+					if(state.isSource() && iSource==0){iSource=state.id();}
+					if(state.isFinal()){this.finalStates.add(state.id());}
+				}
+
+				String tLabel = t.getLabel();
+				if(tLabel.contains(cTau) || tLabel.contains(tau) || tLabel.contains(invisible)
+						|| tLabel.contains(empty) || tLabel==emptyStr || tLabel.matches(strRegEx)) {
+					invLabels.add(tLabel);
+					tLabel = tau;
+				}
+
+				if((rkey = this.globalInverseLabels.get(tLabel)) == null)
+				{
+					rkey = iEvent;
+					this.globalInverseLabels.put(tLabel, iEvent);
+					iEvent++;
+				}
+				modelEventLabels.add(rkey);
+
+				source = this.stateMapping.get(this.stateLabelMapping.get(s.getLabel()));
+				target = this.stateMapping.get(this.stateLabelMapping.get(t.getTarget().getLabel()));
+				transition = new au.qut.apromore.automaton.Transition(source, target, rkey);
+				if(!this.transitionMapping.containsValue(transition))
+					this.transitionMapping.put(transition.id(), transition);
+				source.outgoingTransitions().add(transition);
+				target.incomingTransitions().add(transition);
+			}
+		}
+		this.eventLabelMapping = HashBiMap.create(this.globalInverseLabels.inverse());
+		Set<Integer> keySet = new UnifiedSet<Integer>();
+		keySet.addAll(this.eventLabelMapping.keySet());
+		for(int key : keySet)
+			if(!modelEventLabels.contains(key))
+				this.eventLabelMapping.remove(key);
+		this.inverseEventLabelMapping=this.eventLabelMapping.inverse();
+		this.rg_size_before_tau_removal = this.stateMapping.size() + this.transitionMapping.size();
+		this.removeTauArcs();
+		model = new au.qut.apromore.automaton.Automaton(this.stateMapping, this.eventLabelMapping, this.inverseEventLabelMapping, this.transitionMapping, iSource, this.finalStates, skipEvent);//, globalInverseLabels.inverse());//, ImportPetriNet.readFile());
+		this.rg_nodes=model.numberNodes;
+		this.rg_arcs=model.numberArcs;
+		this.rg_size = model.totalSize;
+		return model;
+	}
+
+	/* ############ MY CODE ENDS ############ */
 	
 	public void removeTauArcs()
 	{

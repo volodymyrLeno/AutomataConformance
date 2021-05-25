@@ -10,55 +10,45 @@ import org.processmining.models.graphbased.directed.transitionsystem.Reachabilit
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class BPMNtoFSMConverter {
+public class BPMNtoTSConverter {
     Queue<BitSet> toBeVisited;
-    LinkedHashSet<BitSet> states;
-    LinkedHashSet<BitSet> finalStates;
-    LinkedHashSet<BitSet> sourceStates;
-    LinkedHashSet<Trans> transitions;
-    LinkedHashMap<BitSet, LinkedHashSet<Trans>> incomingTransitions;
-    LinkedHashMap<BitSet, LinkedHashSet<Trans>> outgoingTransitions;
     LinkedHashMap<Integer, Flow> labeledFlows;
     LinkedHashMap<Flow, Integer> invertedLabeledFlows;
     LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> bitMasks;
+    ReachabilityGraph rg;
 
     BPMNDiagram diagram;
 
-    public ReachabilityGraph BPMNtoFSM(BPMNDiagram diagram){
+    public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
         this.diagram = diagram;
+        rg = new ReachabilityGraph("");
         toBeVisited = new LinkedList<>();
-        states = new LinkedHashSet<>();
-        sourceStates = new LinkedHashSet<>();
-        finalStates = new LinkedHashSet<>();
-        transitions = new LinkedHashSet<>();
-        incomingTransitions = new LinkedHashMap<>();
-        outgoingTransitions = new LinkedHashMap<>();
         labeledFlows = labelFlows(diagram.getFlows());
         invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
                 collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
         bitMasks = computeBitMasks();
-        var initialMarking = new BitSet(labeledFlows.size());
-        initialMarking = getInitialMarking();
-        states.add(initialMarking);
 
-        toBeVisited.add(initialMarking);
+
+        getInitialMarking();
         var next = toBeVisited.poll();
         while(next != null){
             visit(next);
             next = toBeVisited.poll();
         }
-        return null;
+
+        return rg;
     }
 
-    private BitSet getInitialMarking(){
-        BitSet marking = new BitSet();
+    private void getInitialMarking(){
         for(Map.Entry<Integer, Flow> flow: labeledFlows.entrySet()){
             var value = flow.getValue();
-            if(isStart(value.getSource()))
+            if(isStart(value.getSource())){
+                BitSet marking = new BitSet();
                 marking.set(flow.getKey());
+                toBeVisited.add(marking);
+                rg.addState(marking);
+            }
         }
-        sourceStates.add(marking); // at the moment work when there is only one start event in the model
-        return marking;
     }
 
     private LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> computeBitMasks(){
@@ -148,6 +138,7 @@ public class BPMNtoFSMConverter {
 
     private void fire(BitSet activeMarking, BPMNNode node){
         List<Integer> newFlows = new ArrayList<>();
+        //var invisibleTransition = false;
         var outEdges = diagram.getOutEdges(node);
 
         for(var flow: outEdges)
@@ -165,52 +156,38 @@ public class BPMNtoFSMConverter {
             for(int idx: newFlows)
                 newMarking.set(idx);
 
-            updateReachabilityGraph(activeMarking, node, newMarking, oldFlows);
+            if(!isActivity(node))
+                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
+            else
+                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, false);
         }
         else{
             for(int idx: newFlows){
                 BitSet newMarking = (BitSet) activeMarking.clone();
                 newMarking.set(idx);
-                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows);
+                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
             }
         }
     }
 
-    private void updateReachabilityGraph(BitSet activeMarking, BPMNNode node, BitSet newMarking, List<Integer> oldFlows) {
+    private void updateReachabilityGraph(BitSet activeMarking, BPMNNode node, BitSet newMarking,
+                                         List<Integer> oldFlows, Boolean invisibleTransition) {
         for(int jdx: oldFlows)
             newMarking.set(jdx, false);
 
-        if(newMarking.cardinality() == 0)
-            finalStates.add(activeMarking);
-        else {
-            Trans transition = new Trans(activeMarking, newMarking, node);
-
-            if(!states.contains(newMarking)){
-                states.add(newMarking);
+        if(newMarking.cardinality() > 0){
+            if(!rg.getStates().contains(newMarking)){
+                rg.addState(newMarking);
                 toBeVisited.add(newMarking);
             }
 
-            transitions.add(transition);
-
-            addIncomingTransition(newMarking, transition);
-            addOutgoingTransition(activeMarking, transition);
+            if(invisibleTransition){
+                rg.addTransition(activeMarking, newMarking, node);
+                rg.findTransition(activeMarking, newMarking, node).setLabel("tau");
+            }
+            else
+                rg.addTransition(activeMarking, newMarking, node);
         }
-    }
-
-    private void addIncomingTransition(BitSet marking, Trans transition){
-        LinkedHashSet<Trans> newTransition = new LinkedHashSet<>(Collections.singletonList(transition));
-        if(!incomingTransitions.containsKey(marking))
-            incomingTransitions.put(marking, newTransition);
-        else
-            incomingTransitions.get(marking).addAll(newTransition);
-    }
-
-    private void addOutgoingTransition(BitSet marking, Trans transition){
-        LinkedHashSet<Trans> newTransition = new LinkedHashSet(Collections.singleton(transition));
-        if(!outgoingTransitions.containsKey(marking))
-            outgoingTransitions.put(marking, newTransition);
-        else
-            outgoingTransitions.get(marking).addAll(newTransition);
     }
 
     private boolean isStart(BPMNNode node){
@@ -218,9 +195,8 @@ public class BPMNtoFSMConverter {
                 ((Event) node).getEventType().name().equals("START");
     }
 
-    private boolean isEnd(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
-                ((Event) node).getEventType().name().equals("END");
+    private boolean isActivity(BPMNNode node){
+        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Activity;
     }
 
     private boolean isXORGateway(BPMNNode node){
@@ -236,19 +212,5 @@ public class BPMNtoFSMConverter {
     private boolean isORGateway(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("INCLUSIVE");
-    }
-}
-
-class Trans{
-    BitSet source;
-    BitSet target;
-    BPMNNode transition;
-    //Boolean isInvisible;
-
-    public Trans(BitSet source, BitSet target, BPMNNode transition){//, boolean isInvisible){
-        this.source = (BitSet) source.clone();
-        this.target = (BitSet) target.clone();
-        this.transition = transition;
-        //this.isInvisible = isInvisible;
     }
 }
