@@ -15,6 +15,11 @@ public class BPMNtoTSConverter {
     LinkedHashMap<Integer, Flow> labeledFlows;
     LinkedHashMap<Flow, Integer> invertedLabeledFlows;
     LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> bitMasks;
+
+    LinkedHashMap<BPMNNode, LinkedHashMap<Integer, BitSet>> orJoinGatewayBitMasks;
+    LinkedHashSet<BPMNNode> orJoins;
+    LinkedHashSet<BPMNNode> orSplits;
+
     ReachabilityGraph rg;
 
     BPMNDiagram diagram;
@@ -26,8 +31,12 @@ public class BPMNtoTSConverter {
         labeledFlows = labelFlows(diagram.getFlows());
         invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
                 collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
-        bitMasks = computeBitMasks();
 
+        orJoinGatewayBitMasks = new LinkedHashMap<>();
+        orJoins = new LinkedHashSet<>();
+        orSplits = new LinkedHashSet<>();
+
+        bitMasks = computeBitMasks();
 
         getInitialMarking();
         var next = toBeVisited.poll();
@@ -54,8 +63,22 @@ public class BPMNtoTSConverter {
     private LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> computeBitMasks(){
         LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> bitMasks = new LinkedHashMap<>();
         var nodes = diagram.getNodes();
-        for(var node: nodes)
-            bitMasks.put(node, computeBitMask(node));
+        for(var node: nodes){
+            if(!isORGateway(node)){
+                bitMasks.put(node, computeBitMask(node));
+            }
+            else{
+                if(diagram.getInEdges(node).size() > 1){
+                    orJoins.add(node);
+                    computeOrJoinGatewayBitMask(node);
+                }
+                else{
+                    orSplits.add(node);
+                    bitMasks.put(node, computeBitMask(node));
+                }
+            }
+        }
+
         return bitMasks;
     }
 
@@ -87,6 +110,35 @@ public class BPMNtoTSConverter {
         return bitMask;
     }
 
+    private void computeOrJoinGatewayBitMask(BPMNNode node){
+        LinkedHashMap<Integer, BitSet> mask = new LinkedHashMap<>();
+
+        var inEdges = diagram.getInEdges(node);
+        for(var edge: inEdges){
+            BitSet m = new BitSet(labeledFlows.size());
+            int idx = invertedLabeledFlows.get(edge);
+
+            Queue<Integer> toBeVisited = new LinkedList<>();
+            toBeVisited.add(idx);
+
+            var prev = toBeVisited.poll();
+            while(prev != null){
+                m.set(prev);
+                var source = labeledFlows.get(prev).getSource();
+                if(!orJoins.contains(source) && !isStart(source)){
+                    for(var flow: diagram.getInEdges(source))
+                        toBeVisited.add(invertedLabeledFlows.get(flow));
+                }
+
+                prev = toBeVisited.poll();
+            }
+
+            mask.put(idx, m);
+        }
+
+        orJoinGatewayBitMasks.put(node, mask);
+    }
+
     private LinkedHashMap<Integer, Flow> labelFlows(Collection<Flow> flows){
         LinkedHashMap<Integer, Flow> labeledFlows = new LinkedHashMap<>();
         int i = 0;
@@ -99,7 +151,8 @@ public class BPMNtoTSConverter {
     private void visit(BitSet activeMarking){
         var enabledElements = enabledElements(activeMarking);
         for(var element: enabledElements)
-            fire(activeMarking, element);
+            if(!isEnd(element))
+                fire(activeMarking, element);
     }
 
     private LinkedHashSet<BPMNNode> enabledElements(BitSet activeMarking){
@@ -109,7 +162,6 @@ public class BPMNtoTSConverter {
             var target = labeledFlows.get(i).getTarget();
             if(enabled(activeMarking, target))
                 enabledElements.add(target);
-
             if (i == Integer.MAX_VALUE) {
                 break;
             }
@@ -118,27 +170,52 @@ public class BPMNtoTSConverter {
     }
 
     private boolean enabled(BitSet activeMarking, BPMNNode node){
-        var bitMask = bitMasks.get(node);
-        if(bitMask.size() > 1){
-            for(BitSet mask: bitMask){
-                BitSet m = (BitSet) activeMarking.clone();
-                m.and(mask);
-                if(m.equals(mask))
-                    return true;
+        if(!orJoins.contains(node)){
+            var bitMask = bitMasks.get(node);
+            if(bitMask.size() > 1){
+                for(BitSet mask: bitMask){
+                    BitSet m = (BitSet) activeMarking.clone();
+                    m.and(mask);
+                    if(m.equals(mask))
+                        return true;
+                }
+                return false;
             }
-            return false;
+            else{
+                BitSet m = (BitSet) activeMarking.clone();
+                BitSet mask = (BitSet) bitMask.toArray()[0];
+                m.and(mask);
+                return m.equals(mask);
+            }
         }
         else{
-            BitSet m = (BitSet) activeMarking.clone();
-            BitSet mask = (BitSet) bitMask.toArray()[0];
-            m.and(mask);
-            return m.equals(mask);
+            if(isPartiallyEnabled(activeMarking, node)){
+                var mask = orJoinGatewayBitMasks.get(node);
+                for(int key: mask.keySet()){
+                    if(!activeMarking.get(key)){
+                        BitSet m = (BitSet) activeMarking.clone();
+                        m.and(mask.get(key));
+                        if(m.cardinality() > 0)
+                            return false;
+                    }
+                }
+            }
+
+            return true;
         }
+    }
+
+    private boolean isPartiallyEnabled(BitSet activeMarking, BPMNNode node){
+        var mask = orJoinGatewayBitMasks.get(node);
+        for(int key: mask.keySet()){
+            if(activeMarking.get(key))
+                return true;
+        }
+        return false;
     }
 
     private void fire(BitSet activeMarking, BPMNNode node){
         List<Integer> newFlows = new ArrayList<>();
-        //var invisibleTransition = false;
         var outEdges = diagram.getOutEdges(node);
 
         for(var flow: outEdges)
@@ -150,24 +227,48 @@ public class BPMNtoTSConverter {
         for(var flow: inEdges)
             oldFlows.add(invertedLabeledFlows.get(flow));
 
-        if(!isXORGateway(node)){
+        if(orSplits.contains(node)){
+            var combinations = getAllCombinations(newFlows);
+            for(var combination: combinations){
+                BitSet newMarking = (BitSet) activeMarking.clone();
+                for(int idx: combination)
+                    newMarking.set(idx);
+                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
+            }
+        }
+        else if(!isXORGateway(node)){
             BitSet newMarking = (BitSet) activeMarking.clone();
 
             for(int idx: newFlows)
                 newMarking.set(idx);
 
-            if(!isActivity(node))
-                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
-            else
-                updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, false);
+            updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, !isActivity(node));
         }
-        else{
+        else {
             for(int idx: newFlows){
                 BitSet newMarking = (BitSet) activeMarking.clone();
                 newMarking.set(idx);
                 updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
             }
         }
+    }
+
+    private List<List<Integer>> getAllCombinations(List<Integer> flows){
+        List<List<Integer>> combinations = new ArrayList<>();
+
+        int n = flows.size();
+
+        for(int i = 0; i < (1<<n); i++) {
+            List<Integer> combination = new ArrayList<>();
+            for(int j = 0; j < n; j++){
+                if((i & (1<<j)) > 0)
+                    combination.add(flows.get(j));
+            }
+            combinations.add(combination);
+        }
+
+        combinations.remove(0);
+        return combinations;
     }
 
     private void updateReachabilityGraph(BitSet activeMarking, BPMNNode node, BitSet newMarking,
@@ -193,6 +294,11 @@ public class BPMNtoTSConverter {
     private boolean isStart(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
                 ((Event) node).getEventType().name().equals("START");
+    }
+
+    private boolean isEnd(BPMNNode node){
+        return  node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
+                ((Event) node).getEventType().name().equals("END");
     }
 
     private boolean isActivity(BPMNNode node){
