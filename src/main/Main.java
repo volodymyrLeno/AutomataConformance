@@ -57,7 +57,7 @@ import javax.swing.plaf.synth.SynthEditorPaneUI;
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		String filePath = "C:/Volodymyr/diagram11.bpmn";
+		String filePath = "C:/Volodymyr/diagram12.bpmn";
 		ImportProcessModel ipm = new ImportProcessModel();
 
 		ipm.createAutomatonFromPNMLorBPMNFile(filePath,null,null);

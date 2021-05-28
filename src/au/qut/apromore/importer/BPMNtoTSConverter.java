@@ -125,7 +125,7 @@ public class BPMNtoTSConverter {
             while(prev != null){
                 m.set(prev);
                 var source = labeledFlows.get(prev).getSource();
-                if(!orJoins.contains(source) && !isStart(source)){
+                if((!isORGateway(source) || diagram.getInEdges(source).size() == 1) && !isStart(source)){
                     for(var flow: diagram.getInEdges(source))
                         toBeVisited.add(invertedLabeledFlows.get(flow));
                 }
