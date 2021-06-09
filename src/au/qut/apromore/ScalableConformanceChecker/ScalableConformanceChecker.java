@@ -33,6 +33,7 @@ import org.eclipse.collections.impl.set.mutable.UnifiedSet;
 import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
+import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.petrinet.replayresult.PNMatchInstancesRepResult;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
@@ -87,6 +88,7 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 	
 	private Automaton logAutomaton;
 	private Automaton modelAutomaton;
+	private Automaton originalModelAutomaton;
 	private PSP psp;
 	private Map<IntArrayList, Set<Node>> prefixMemorizationTable;
 	private IntObjectHashMap<Set<Configuration>> suffixMemorizationTable;
@@ -182,7 +184,11 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 		this.preperationLog = logTime - start;
 		logTime = System.currentTimeMillis();
 		//System.out.println("FSM creation");
-		modelAutomaton = new ImportProcessModel().createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+
+		var ipm = new ImportProcessModel();
+		modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+		originalModelAutomaton = ipm.originalModel;
+
 		long modelTime = System.currentTimeMillis();
 		psp = new PSP(logAutomaton,modelAutomaton);
 		this.preperationModel = modelTime - logTime;
@@ -1618,4 +1624,8 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 		pw1.close();
 		pw2.close();
 	}
+
+	public Automaton getOriginalModelAutomaton() { return originalModelAutomaton; }
+
+	public Automaton getModelAutomaton() { return modelAutomaton; }
 }

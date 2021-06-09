@@ -44,6 +44,21 @@ public class Transition {
 		this.eventID = eventID;
 	}
 
+	public Transition(Integer id, State state, State state2, int eventID)
+	{
+		this.id = id;
+		this.source = state;
+		this.target = state2;
+		this.eventID = eventID;
+	}
+
+	public Transition(Transition transition){
+		this.id = transition.id();
+		this.source = transition.source();
+		this.target = transition.target();
+		this.eventID = transition.eventID();
+	}
+
 	public State source()
 	{
 		return this.source;
@@ -58,6 +73,8 @@ public class Transition {
 	{
 		return this.eventID;
 	}
+
+	public void setEventID(Integer id) { this.eventID = id; }
 	
 	public int id()
 	{

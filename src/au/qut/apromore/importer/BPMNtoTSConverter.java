@@ -6,9 +6,16 @@ import org.processmining.models.graphbased.directed.bpmn.elements.Event;
 import org.processmining.models.graphbased.directed.bpmn.elements.Flow;
 import org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
 import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
+import org.processmining.models.graphbased.directed.transitionsystem.State;
+import org.processmining.models.graphbased.directed.transitionsystem.Transition;
 
 import java.util.*;
 import java.util.stream.Collectors;
+
+/**
+ * @author Volodymyr Leno,
+ * @version 1.0, 09.06.2021
+ */
 
 public class BPMNtoTSConverter {
     Queue<BitSet> toBeVisited;
@@ -20,8 +27,9 @@ public class BPMNtoTSConverter {
     LinkedHashSet<BPMNNode> orJoins;
     LinkedHashSet<BPMNNode> orSplits;
 
-    ReachabilityGraph rg;
+    LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> info;
 
+    ReachabilityGraph rg;
     BPMNDiagram diagram;
 
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
@@ -284,7 +292,11 @@ public class BPMNtoTSConverter {
 
             if(invisibleTransition){
                 rg.addTransition(activeMarking, newMarking, node);
-                rg.findTransition(activeMarking, newMarking, node).setLabel("tau");
+
+                //String label = ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getId().toString();
+
+                String label = "gateway " + ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getAttributeMap().get("Original id").toString();
+                rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
             else
                 rg.addTransition(activeMarking, newMarking, node);

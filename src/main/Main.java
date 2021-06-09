@@ -7,8 +7,7 @@ import java.io.PrintWriter;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import au.qut.apromore.ScalableConformanceChecker.DecomposingTRConformanceChecker;
-import au.qut.apromore.ScalableConformanceChecker.TRConformanceChecker;
+import au.qut.apromore.ScalableConformanceChecker.*;
 import au.qut.apromore.automaton.State;
 import au.qut.apromore.importer.*;
 import event.InfrequentBehaviourFilter;
@@ -39,6 +38,7 @@ import org.jbpt.petri.unfolding.OccurrenceNet;
 import org.processmining.log.models.XEventClassifierList;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
+import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.petrinet.replayresult.PNMatchInstancesRepResult;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
@@ -46,8 +46,6 @@ import org.processmining.plugins.pnml.exporting.PnmlExportNetToPNML;
 
 import com.raffaeleconforti.context.FakePluginContext;
 
-import au.qut.apromore.ScalableConformanceChecker.DecomposingConformanceChecker;
-import au.qut.apromore.ScalableConformanceChecker.ScalableConformanceChecker;
 import au.qut.apromore.automaton.Automaton;
 import org.processmining.plugins.replayer.replayresult.AllSyncReplayResult;
 
@@ -57,12 +55,20 @@ import javax.swing.plaf.synth.SynthEditorPaneUI;
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		String filePath = "C:/Volodymyr/diagram12.bpmn";
-		ImportProcessModel ipm = new ImportProcessModel();
+		String model = "models/Loan Application.bpmn";
+		String log = "logs/Loan Application.xes";
+		String path = "C:/Volodymyr/TEST/";
 
-		ipm.createAutomatonFromPNMLorBPMNFile(filePath,null,null);
+		//ImportProcessModel ipm = new ImportProcessModel();
+		//ipm.createAutomatonFromPNMLorBPMNFile(filePath,null,null);
+		//System.out.println();
+
+		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
+
+        ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
 		System.out.println();
 
+		AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
 
 		/*FastList<String> paths = new FastList<>();
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/");

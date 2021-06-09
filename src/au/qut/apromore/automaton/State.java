@@ -1,9 +1,6 @@
 package au.qut.apromore.automaton;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
@@ -75,6 +72,21 @@ public class State {
 		this.isSource = isSource;
 		this.isFinal = isFinal;
 		
+	}
+
+	public State(State state){
+		this.id = state.id();
+		this.label = state.label();
+		this.isSource = state.isSource();
+		this.isFinal = state.isFinal();
+
+		this.incomingTransitions = new FastList<>();
+		for(var transition: state.incomingTransitions())
+			this.incomingTransitions.add(new Transition(transition));
+
+		this.outgoingTransitions = new FastList<>();
+		for(var transition: state.outgoingTransitions())
+			this.outgoingTransitions.add(new Transition(transition));
 	}
 	
 	public int id()
