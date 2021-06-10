@@ -59,16 +59,10 @@ public class Main {
 		String log = "logs/Loan Application.xes";
 		String path = "C:/Volodymyr/TEST/";
 
-		//ImportProcessModel ipm = new ImportProcessModel();
-		//ipm.createAutomatonFromPNMLorBPMNFile(filePath,null,null);
-		//System.out.println();
-
-		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
-
         ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
 		System.out.println();
 
-		AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
+		AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton(), 2);
 
 		/*FastList<String> paths = new FastList<>();
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/");

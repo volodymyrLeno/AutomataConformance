@@ -20,7 +20,7 @@ public class AlignmentPostprocessor {
     private static List<Integer> gatewayIDs;
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
-    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton){
+    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, Integer lookupStepsAhead){
 
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
 
@@ -28,13 +28,13 @@ public class AlignmentPostprocessor {
         gatewaysInfo = computeGateways(originalAutomaton);
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
-            enhancedAlignments.put(entry.getKey(), getEnhancedAlignment(entry.getValue(), originalAutomaton));
+            enhancedAlignments.put(entry.getKey(), getEnhancedAlignment(entry.getValue(), originalAutomaton, lookupStepsAhead));
         }
 
         return enhancedAlignments;
     }
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton){
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton, Integer lookupStepsAhead){
         State currentState = automaton.source();
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
@@ -50,21 +50,25 @@ public class AlignmentPostprocessor {
                 LinkedHashMap<Transition, List<Transition>> info = gatewaysInfo.get(currentState);
 
                 for (Map.Entry<Transition, List<Transition>> entry : info.entrySet()) {
-                    if (entry.getKey() != null && entry.getKey().eventID() == automaton.inverseEventLabels().get(step)) {
+                    if (entry.getKey() != null && entry.getKey().eventID() == automaton.inverseEventLabels().get(step) &&
+                    fitsAlignmentWithLookup(automaton, entry.getKey().target(), alignment, i, lookupStepsAhead)){
                         var gateways = entry.getValue().stream().map(Transition::eventID).collect(Collectors.toList());
 
                         for (var gateway : gateways) {
                             String move = automaton.eventLabels().get(gateway);
                             nodeInstances.add(move);
                             stepTypes.add(StepTypes.MREAL);
-                            currentState = executeMove(automaton, currentState, move, alignment, i-1);
-                            }
+                        }
+
+                        currentState = entry.getKey().source();
+
+                        break;
                         }
 
                     }
                     nodeInstances.add(step);
                     stepTypes.add(stepType);
-                    currentState = executeMove(automaton, currentState, step, alignment, i);
+                    currentState = executeMove(automaton, currentState, step);
                 }
 
             else{
@@ -74,7 +78,7 @@ public class AlignmentPostprocessor {
 
         }
 
-        if(!currentState.isFinal()){
+        if(currentState != null && !currentState.isFinal()){
             var gateways = gatewaysInfo.get(currentState).get(null).stream().map(Transition::eventID).collect(Collectors.toList());
             for(var gateway: gateways){
                 nodeInstances.add(automaton.eventLabels().get(gateway));
@@ -92,20 +96,18 @@ public class AlignmentPostprocessor {
         return enhancedAlignment;
     }
 
-
-    private static State executeMove(Automaton automaton, State currentState, String move, AllSyncReplayResult alignment, Integer activePos){
+    private static State executeMove(Automaton automaton, State currentState, String move){
         var transitions = currentState.outgoingTransitions();
 
         for(var transition: transitions){
-            if(transition.eventID() == automaton.inverseEventLabels().get(move) &&
-                    fulfillsAlignment(automaton, transition.target(), alignment, activePos))
+            if(transition.eventID() == automaton.inverseEventLabels().get(move))
                 return transition.target();
         }
 
         return null;
     }
 
-    private static boolean fulfillsAlignment(Automaton automaton, State newState, AllSyncReplayResult alignment, Integer activePos){
+    private static boolean fitsAlignment(Automaton automaton, State newState, AllSyncReplayResult alignment, Integer activePos){
         String nextModelMove = null;
 
         for(int i = activePos + 1; i < alignment.getNodeInstanceLst().get(0).size(); i++) {
@@ -116,12 +118,16 @@ public class AlignmentPostprocessor {
             }
         }
 
+        if(newState.isFinal() && nextModelMove == null)
+            return true;
+
         var transitions = gatewaysInfo.get(newState);
 
+        if(nextModelMove == null && transitions.containsKey(null))
+            return true;
+
         for(Transition transition: transitions.keySet()) {
-            if(transition == null && nextModelMove == null)
-                return true;
-            else if(transition != null){
+            if(transition != null){
                 var evId = transition.eventID();
                 var moveId = automaton.inverseEventLabels().get(nextModelMove);
                 if (evId == moveId)
@@ -192,6 +198,86 @@ public class AlignmentPostprocessor {
             if(label.startsWith("gateway"))
                 gatewayIDs.add(idx);
         }
+    }
 
+    private static boolean fitsAlignmentWithLookup(Automaton automaton, State newState, AllSyncReplayResult alignment, Integer activePos, Integer stepsAhead){
+        if(stepsAhead == 1)
+            return fitsAlignment(automaton, newState, alignment, activePos);
+        else{
+            List<String> nextModelMoves = new ArrayList<>();
+            for(int i = activePos + 1; i < alignment.getNodeInstanceLst().get(0).size(); i++){
+                if(nextModelMoves.size() < stepsAhead){
+                    var stepType = alignment.getStepTypesLst().get(0).get(i);
+                    if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL){
+                            nextModelMoves.add(alignment.getNodeInstanceLst().get(0).get(i).toString());
+                        }
+                    }
+                else
+                    break;
+            }
+
+            var paths = getPaths(automaton, newState, stepsAhead);
+
+            if(nextModelMoves.size() == 0){
+                if(paths.size() == 0)
+                    return true;
+                else{
+                    for(var path: paths){
+                        if(path.size() == 0)
+                            return true;
+                    }
+                    return false;
+                }
+            }
+            else
+                return paths.contains(nextModelMoves);
+        }
+    }
+    
+    private static List<List<String>> getPaths(Automaton automaton, State state, Integer length){
+        List<List<String>> paths = new ArrayList<>();
+
+        Queue<List<Transition>> queue = new LinkedList<>();
+
+        for(var transition: gatewaysInfo.get(state).keySet()){
+            List<Transition> path = new ArrayList<>(Collections.singleton(transition));
+            queue.offer(path);
+        }
+
+        while(!queue.isEmpty()){
+            List<Transition> activePath = queue.poll();
+            Transition last = activePath.get(activePath.size() - 1);
+
+            if(activePath.size() == length){
+                List<String> path = new ArrayList<>();
+                for(var transition: activePath){
+                    if(transition != null)
+                        path.add(automaton.eventLabels().get(transition.eventID()));
+                }
+                paths.add(path);
+            }
+
+            else{
+                if(last != null){
+                    List<Transition> lastNode = new ArrayList<>(gatewaysInfo.get(last.target()).keySet());
+
+                    if(lastNode.size() > 0){
+
+                        for(Transition transition: lastNode){
+                            if(!activePath.contains(transition)){
+                                List<Transition> newPath = new ArrayList<>(activePath);
+                                newPath.add(transition);
+                                queue.offer(newPath);
+                            }
+                        }
+
+                    }
+                    else
+                        paths.add(activePath.stream().map(el -> automaton.eventLabels().get(el.eventID())).collect(Collectors.toList()));
+                }
+            }
+        }
+
+        return paths;
     }
 }

@@ -2,14 +2,12 @@ package au.qut.apromore.importer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import au.qut.apromore.PetriNet.PetriNet;
+import au.qut.apromore.automaton.Automaton;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
@@ -76,6 +74,7 @@ public class ImportProcessModel
 	protected FakePluginContext context = new FakePluginContext();
 	private BiMap<String, Integer> stateLabelMapping;
 	public au.qut.apromore.automaton.Automaton model;
+	public au.qut.apromore.automaton.Automaton originalModel;
 	public BiMap<Integer, String> globalLabelMapping = HashBiMap.create();
 	public BiMap<String, Integer> globalInverseLabels = HashBiMap.create();
 	protected BiMap<Integer, String> eventLabelMapping;
@@ -544,11 +543,16 @@ public class ImportProcessModel
 		return model;
 	}
 
-	public au.qut.apromore.automaton.Automaton convertReachabilityGraphToFSM(ReachabilityGraph pnet_rg, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping) throws IOException
+
+	public Automaton convertReachabilityGraphToFSM(ReachabilityGraph rg, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping) throws  IOException
 	{
+		LinkedHashMap<Integer, au.qut.apromore.automaton.State> originalStateMapping = new LinkedHashMap<>();
+		LinkedHashMap<Integer, au.qut.apromore.automaton.Transition> originalTransitionMapping = new LinkedHashMap<>();
+
 		au.qut.apromore.automaton.State.UNIQUE_ID = 0;
 		int iEvent;
 		this.stateLabelMapping = HashBiMap.create();
+
 		if(eventLabels==null)
 		{
 			iEvent = 0;
@@ -556,9 +560,10 @@ public class ImportProcessModel
 		}
 		else
 		{
-			iEvent = eventLabels.size()+1;
+			iEvent = eventLabels.size();
 			this.eventLabelMapping = HashBiMap.create(eventLabels);
 		}
+
 		if(inverseEventLabelMapping==null) {
 			this.inverseEventLabelMapping = HashBiMap.create();
 			this.globalInverseLabels.put("tau",skipEvent);
@@ -567,12 +572,10 @@ public class ImportProcessModel
 		{
 			this.inverseEventLabelMapping = HashBiMap.create(inverseEventLabelMapping);
 			this.globalInverseLabels.putAll(inverseEventLabelMapping);
-			if(!this.globalInverseLabels.containsKey("tau"))
-				this.globalInverseLabels.put("tau",skipEvent);
 		}
+
 		this.stateMapping = HashBiMap.create();
 		this.transitionMapping = HashBiMap.create();
-
 		this.finalStates = new IntHashSet();
 
 		IntHashSet modelEventLabels = new IntHashSet();
@@ -581,8 +584,9 @@ public class ImportProcessModel
 		au.qut.apromore.automaton.State source;
 		au.qut.apromore.automaton.State target;
 		au.qut.apromore.automaton.Transition transition;
-		UnifiedSet invLabels = new UnifiedSet();
-		for (State s : pnet_rg.getNodes())
+		List<Integer> tauIdxs = new ArrayList<>();
+
+		for (State s : rg.getNodes())
 		{
 			if(!this.stateMapping.containsKey(this.stateLabelMapping.get(s.getLabel())))
 			{
@@ -590,6 +594,9 @@ public class ImportProcessModel
 						s.getGraph().getInEdges(s).isEmpty(), s.getGraph().getOutEdges(s).isEmpty());
 				this.stateMapping.put(state.id(), state);
 				this.stateLabelMapping.put(s.getLabel(), state.id());
+
+				originalStateMapping.put(state.id(), new au.qut.apromore.automaton.State(state)); //
+
 				if(state.isSource() && iSource==0){iSource=state.id();}
 				if(state.isFinal()){this.finalStates.add(state.id());}
 			}
@@ -601,20 +608,21 @@ public class ImportProcessModel
 					state = new au.qut.apromore.automaton.State(t.getTarget().getLabel(),
 							t.getGraph().getInEdges(t.getTarget()).isEmpty(), t.getGraph().getOutEdges(t.getTarget()).isEmpty());
 					this.stateMapping.put(state.id(), state);
+
+					originalStateMapping.put(state.id(), new au.qut.apromore.automaton.State(state)); //
+
 					this.stateLabelMapping.put(t.getTarget().getLabel(), state.id());
 					if(state.isSource() && iSource==0){iSource=state.id();}
 					if(state.isFinal()){this.finalStates.add(state.id());}
 				}
 
 				String tLabel = t.getLabel();
-				if(tLabel.contains(cTau) || tLabel.contains(tau) || tLabel.contains(invisible)
-						|| tLabel.contains(empty) || tLabel==emptyStr || tLabel.matches(strRegEx)) {
-					invLabels.add(tLabel);
-					tLabel = tau;
-				}
 
 				if((rkey = this.globalInverseLabels.get(tLabel)) == null)
 				{
+					if(tLabel.startsWith("gateway") && !tauIdxs.contains(iEvent))
+						tauIdxs.add(iEvent);
+
 					rkey = iEvent;
 					this.globalInverseLabels.put(tLabel, iEvent);
 					iEvent++;
@@ -628,8 +636,17 @@ public class ImportProcessModel
 					this.transitionMapping.put(transition.id(), transition);
 				source.outgoingTransitions().add(transition);
 				target.incomingTransitions().add(transition);
+
+				var originalSource = originalStateMapping.get(this.stateLabelMapping.get(s.getLabel()));
+				var originalTarget = originalStateMapping.get(this.stateLabelMapping.get(t.getTarget().getLabel()));
+				var originalTransition = new au.qut.apromore.automaton.Transition(transition.id(), originalSource, originalTarget, rkey);
+				if(!originalTransitionMapping.containsValue(originalTransition))
+					originalTransitionMapping.put(originalTransition.id(), originalTransition);
+				originalSource.outgoingTransitions().add(originalTransition);
+				originalTarget.incomingTransitions().add(originalTransition);
 			}
 		}
+
 		this.eventLabelMapping = HashBiMap.create(this.globalInverseLabels.inverse());
 		Set<Integer> keySet = new UnifiedSet<Integer>();
 		keySet.addAll(this.eventLabelMapping.keySet());
@@ -637,7 +654,35 @@ public class ImportProcessModel
 			if(!modelEventLabels.contains(key))
 				this.eventLabelMapping.remove(key);
 		this.inverseEventLabelMapping=this.eventLabelMapping.inverse();
+
+		HashMap<Integer, String> originalEventLabelMapping = new HashMap<>();
+		for(Map.Entry<Integer, String> entry : eventLabelMapping.entrySet())
+			originalEventLabelMapping.put(entry.getKey(), entry.getValue());
+
+		HashMap<String, Integer> originalInverseEventLabelMapping = new HashMap<>(originalEventLabelMapping.entrySet().stream().
+				collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
+
+		IntHashSet originalFinalStates = new IntHashSet(this.finalStates);
+
+		originalModel = new Automaton(originalStateMapping, HashBiMap.create(originalEventLabelMapping),
+				HashBiMap.create(originalInverseEventLabelMapping), originalTransitionMapping, iSource, originalFinalStates, skipEvent);
+
 		this.rg_size_before_tau_removal = this.stateMapping.size() + this.transitionMapping.size();
+
+		for(var key: transitionMapping.keySet()){
+			var trs = transitionMapping.get(key);
+
+			Integer eventID = trs.eventID();
+
+			if(tauIdxs.contains(eventID)){
+				eventLabelMapping.remove(eventID);
+				trs.setEventID(skipEvent);
+			}
+		}
+
+		if(!this.eventLabelMapping.containsKey(skipEvent))
+			this.eventLabelMapping.put(skipEvent, "tau");
+
 		this.removeTauArcs();
 		model = new au.qut.apromore.automaton.Automaton(this.stateMapping, this.eventLabelMapping, this.inverseEventLabelMapping, this.transitionMapping, iSource, this.finalStates, skipEvent);//, globalInverseLabels.inverse());//, ImportPetriNet.readFile());
 		this.rg_nodes=model.numberNodes;
@@ -673,7 +718,8 @@ public class ImportProcessModel
 					{
 						it.remove();
 						tr.source().outgoingTransitions().remove(tr);
-						this.transitionMapping.inverse().remove(tr);
+						this.transitionMapping.remove(tr.id());
+						//this.transitionMapping.inverse().remove(tr);
 					}
 				}
 			}
@@ -694,7 +740,8 @@ public class ImportProcessModel
 					for(au.qut.apromore.automaton.Transition tr : state.outgoingTransitions())
 					{
 						tr.target().incomingTransitions().remove(tr);
-						this.transitionMapping.inverse().remove(tr);
+						this.transitionMapping.remove(tr.id());
+						//this.transitionMapping.inverse().remove(tr);
 					}
 					it.remove();
 					notFinished = true;
@@ -704,7 +751,8 @@ public class ImportProcessModel
 					for(au.qut.apromore.automaton.Transition tr : state.incomingTransitions())
 					{
 						tr.source().outgoingTransitions().remove(tr);
-						this.transitionMapping.inverse().remove(tr);
+						this.transitionMapping.remove(tr.id());
+						//this.transitionMapping.inverse().remove(tr);
 					}
 					it.remove();
 					notFinished = true;
@@ -746,7 +794,8 @@ public class ImportProcessModel
 				{
 					it.remove();
 					tr.source().outgoingTransitions().remove(tr);
-					this.transitionMapping.inverse().remove(tr);
+					this.transitionMapping.remove(tr.id());
+					//this.transitionMapping.inverse().remove(tr);
 				}
 			}
 		}
@@ -763,7 +812,8 @@ public class ImportProcessModel
 					for(au.qut.apromore.automaton.Transition tr : state.outgoingTransitions())
 					{
 						tr.target().incomingTransitions().remove(tr);
-						this.transitionMapping.inverse().remove(tr);
+						this.transitionMapping.remove(tr.id());
+						//this.transitionMapping.inverse().remove(tr);
 					}
 					it.remove();
 					notFinished = true;
@@ -773,7 +823,8 @@ public class ImportProcessModel
 					for(au.qut.apromore.automaton.Transition tr : state.incomingTransitions())
 					{
 						tr.source().outgoingTransitions().remove(tr);
-						this.transitionMapping.inverse().remove(tr);
+						this.transitionMapping.remove(tr.id());
+						//this.transitionMapping.inverse().remove(tr);
 					}
 					it.remove();
 					notFinished = true;
