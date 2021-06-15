@@ -23,12 +23,17 @@ public class AlignmentPostprocessor {
     public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, Integer lookupStepsAhead){
 
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
+        Map<IntArrayList, AllSyncReplayResult> notParsableAlignments = new HashMap<>();
 
         getGatewayIds(originalAutomaton);
         gatewaysInfo = computeGateways(originalAutomaton);
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
-            enhancedAlignments.put(entry.getKey(), getEnhancedAlignment(entry.getValue(), originalAutomaton, lookupStepsAhead));
+            var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton, lookupStepsAhead);
+            if(enhancedAlignment != null)
+                enhancedAlignments.put(entry.getKey(), enhancedAlignment);
+            else
+                notParsableAlignments.put(entry.getKey(), entry.getValue());
         }
 
         return enhancedAlignments;
@@ -47,6 +52,10 @@ public class AlignmentPostprocessor {
             String step = alignment.getNodeInstanceLst().get(0).get(i).toString();
 
             if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
+
+                if(currentState == null)
+                    return null;
+
                 LinkedHashMap<Transition, List<Transition>> info = gatewaysInfo.get(currentState);
 
                 for (Map.Entry<Transition, List<Transition>> entry : info.entrySet()) {
