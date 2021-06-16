@@ -284,6 +284,8 @@ public class AlignmentPostprocessor {
                     else
                         paths.add(activePath.stream().map(el -> automaton.eventLabels().get(el.eventID())).collect(Collectors.toList()));
                 }
+                else
+                    paths.add(activePath.subList(0, activePath.size() - 1).stream().map(el -> automaton.eventLabels().get(el.eventID())).collect(Collectors.toList()));
             }
         }
 
