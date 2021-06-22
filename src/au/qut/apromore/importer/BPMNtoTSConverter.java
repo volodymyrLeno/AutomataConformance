@@ -8,6 +8,7 @@ import org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
 import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 import org.processmining.models.graphbased.directed.transitionsystem.State;
 import org.processmining.models.graphbased.directed.transitionsystem.Transition;
+import weka.classifiers.rules.DecisionTable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -26,14 +27,17 @@ public class BPMNtoTSConverter {
     LinkedHashMap<BPMNNode, LinkedHashMap<Integer, BitSet>> orJoinGatewayBitMasks;
     LinkedHashSet<BPMNNode> orJoins;
     LinkedHashSet<BPMNNode> orSplits;
-
-    LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> info;
+    LinkedHashMap<BPMNNode, List<BPMNNode>> structuralConflicts;
 
     ReachabilityGraph rg;
     BPMNDiagram diagram;
 
+
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
         this.diagram = diagram;
+
+        structuralConflicts = getStructuralConflicts();
+
         rg = new ReachabilityGraph("");
         toBeVisited = new LinkedList<>();
         labeledFlows = labelFlows(diagram.getFlows());
@@ -126,16 +130,24 @@ public class BPMNtoTSConverter {
             BitSet m = new BitSet(labeledFlows.size());
             int idx = invertedLabeledFlows.get(edge);
 
+            List<Integer> alreadyVisited = new ArrayList<>();
             Queue<Integer> toBeVisited = new LinkedList<>();
             toBeVisited.add(idx);
 
             var prev = toBeVisited.poll();
+
             while(prev != null){
                 m.set(prev);
+                alreadyVisited.add(prev);
                 var source = labeledFlows.get(prev).getSource();
-                if((!isORGateway(source) || diagram.getInEdges(source).size() == 1) && !isStart(source)){
-                    for(var flow: diagram.getInEdges(source))
-                        toBeVisited.add(invertedLabeledFlows.get(flow));
+                if(!isStart(source) && !source.equals(node)){
+                //if((!isORGateway(source) || diagram.getInEdges(source).size() == 1) && !isStart(source)){
+                    for(var flow: diagram.getInEdges(source)){
+                        int i = invertedLabeledFlows.get(flow);
+                        if(!alreadyVisited.contains(i)){
+                            toBeVisited.add(invertedLabeledFlows.get(flow));
+                        }
+                    }
                 }
 
                 prev = toBeVisited.poll();
@@ -203,8 +215,35 @@ public class BPMNtoTSConverter {
                     if(!activeMarking.get(key)){
                         BitSet m = (BitSet) activeMarking.clone();
                         m.and(mask.get(key));
-                        if(m.cardinality() > 0)
-                            return false;
+                        if(m.cardinality() > 0) {
+
+                            if(!structuralConflicts.containsKey(node))
+                                return false;
+                            else{
+                                int dest = invertedLabeledFlows.get(this.diagram.getOutEdges(node).iterator().next());
+                                var conflictingGateways = structuralConflicts.get(node);
+
+                                for(var gateway: conflictingGateways){
+                                    if(isPartiallyEnabled(activeMarking, gateway)){
+
+                                        for(int incomingFlow: orJoinGatewayBitMasks.get(gateway).keySet()){
+                                            if(!activeMarking.get(incomingFlow)){
+                                                var pathMasks = getPaths(incomingFlow, dest);
+                                                for(var pathMask: pathMasks){
+                                                    m = (BitSet) activeMarking.clone();
+                                                    m.and(pathMask);
+                                                    if(m.cardinality() == 0)
+                                                        return true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else
+                                        return false;
+                                }
+                                return false;
+                            }
+                        }
                     }
                 }
             }
@@ -302,6 +341,167 @@ public class BPMNtoTSConverter {
                 rg.addTransition(activeMarking, newMarking, node);
         }
     }
+
+    private HashMap<BPMNNode, BitSet> computeFullEnablement(){
+        HashMap<BPMNNode, BitSet> fullEnablements = new HashMap<>();
+        for(var orJoin: orJoins){
+            BitSet fullEnablement = new BitSet(labeledFlows.size());
+            for(var edge: this.diagram.getInEdges(orJoin))
+                fullEnablement.set(this.invertedLabeledFlows.get(edge));
+            fullEnablements.put(orJoin, fullEnablement);
+        }
+        return fullEnablements;
+    }
+
+
+    private void DFS(int[][] adjacencyMatrix, int v, boolean[] visited, List<Integer> comp){
+        visited[v] = true;
+        for(int i = 0; i < adjacencyMatrix[v].length; i++)
+            if(adjacencyMatrix[v][i] > 0 && !visited[i])
+                DFS(adjacencyMatrix, i, visited, comp);
+        comp.add(v);
+    }
+
+    private List<Integer> fillOrder(int[][] adjacencyMatrix, boolean[] visited)
+    {
+        int V = adjacencyMatrix.length;
+        List<Integer> order = new ArrayList<>();
+
+        for (int i = 0; i < V; i++)
+            if (!visited[i])
+                DFS(adjacencyMatrix, i, visited, order);
+        return order;
+    }
+
+    public int[][] transposeAdjacencyMatrix(int[][] adj){
+        int[][] transposedMatrix = new int[adj.length][adj[0].length];
+        for(int i = 0; i < adj.length; i++){
+            for(int j = 0; j < adj[i].length; j++){
+                transposedMatrix[i][j] = adj[j][i];
+            }
+        }
+        return transposedMatrix;
+    }
+
+    public List<List<BPMNNode>> getSCComponents()
+    {
+        var nodes = new ArrayList<>(this.diagram.getNodes());
+        int N = nodes.size();
+
+        int[][] adjacencyMatrix = new int[N][N];
+        for(int i = 0; i < N; i ++){
+            var outEdges = this.diagram.getOutEdges(nodes.get(i));
+            for(var edge: outEdges){
+                adjacencyMatrix[i][nodes.indexOf(edge.getTarget())] = 1;
+            }
+        }
+
+        boolean[] visited = new boolean[N];
+        List<Integer> order = fillOrder(adjacencyMatrix, visited);
+        int[][] transposedAdjacencyMatrix = transposeAdjacencyMatrix(adjacencyMatrix);
+        visited = new boolean[N];
+        Collections.reverse(order);
+
+        List<List<Integer>> SCComp = new ArrayList<>();
+        for (Integer anOrder : order) {
+            int v = anOrder;
+            if (!visited[v]) {
+                List<Integer> comp = new ArrayList<>();
+                DFS(transposedAdjacencyMatrix, v, visited, comp);
+                SCComp.add(comp);
+            }
+        }
+
+        List<List<BPMNNode>> sccs = new ArrayList<>();
+
+        for(var scomp: SCComp){
+            List<BPMNNode> scc = new ArrayList<>();
+            for(var idx: scomp)
+                scc.add(nodes.get(idx));
+            sccs.add(scc);
+        }
+
+        return sccs;
+    }
+
+    private LinkedHashMap<BPMNNode, List<BPMNNode>> getStructuralConflicts(){
+        LinkedHashMap<BPMNNode, List<BPMNNode>> structuralConflicts = new LinkedHashMap<>();
+
+        var sccs = getSCComponents();
+
+        List<BPMNNode> orJoinGateways = this.diagram.getGateways().stream().filter(el -> isORGateway(el) &&
+                this.diagram.getInEdges(el).size() > 1).collect(Collectors.toList());
+
+        for(var gateway: orJoinGateways){
+            List<BPMNNode> gateways = new ArrayList<>();
+            for(var scc: sccs)
+                if(scc.contains(gateway)){
+                    gateways.addAll(scc.stream().filter(el -> orJoinGateways.contains(el) &&
+                            !el.equals(gateway)).collect(Collectors.toList()));
+                    break;
+                }
+
+            if(gateways.size() > 0)
+                structuralConflicts.put(gateway, gateways);
+        }
+
+        return structuralConflicts;
+    }
+
+
+    private List<BitSet> getPaths(int source, int destination){
+        List<List<Integer>> paths = new ArrayList<>();
+        List<BitSet> pathMasks = new ArrayList<>();
+
+        boolean[] isVisited = new boolean[this.diagram.getFlows().size()];
+        ArrayList<Integer> pathList = new ArrayList<>();
+
+        // add source to path[]
+        pathList.add(source);
+        getAllPathsUtil(source, destination, isVisited, pathList, paths);
+
+        for(var path: paths){
+            BitSet pathMask = new BitSet(labeledFlows.size());
+            for(int idx: path)
+                pathMask.set(idx);
+            pathMasks.add(pathMask);
+        }
+
+        return pathMasks;
+    }
+
+    private void getAllPathsUtil(int u, int d, boolean[] isVisited, List<Integer> localPathList, List<List<Integer>> globalPathList) {
+
+        if (u == d) {
+            globalPathList.add(new ArrayList<>(localPathList));
+        }
+
+        // Mark the current node
+        isVisited[u] = true;
+
+        // Recur for all the vertices
+        // adjacent to current vertex
+
+        var currentNode = labeledFlows.get(u).getSource();
+        var adjacentFlows = this.diagram.getInEdges(currentNode).stream().map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
+
+        for (Integer i : adjacentFlows) {
+            if (!isVisited[i]) {
+                // store current node
+                // in path[]
+                localPathList.add(i);
+                getAllPathsUtil(i, d, isVisited, localPathList, globalPathList);
+
+                // remove current node
+                // in path[]
+                localPathList.remove(i);
+            }
+        }
+
+        // Mark the current node
+        isVisited[u] = false;
+    }
+
 
     private boolean isStart(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
