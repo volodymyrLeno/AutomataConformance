@@ -82,6 +82,7 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
 
     private Automaton logAutomaton;
     private Automaton modelAutomaton;
+    private Automaton originalModelAutomaton;
     private PSP psp;
     private Map<IntArrayList, Set<Node>> prefixMemorizationTable;
     private IntObjectHashMap<Set<Configuration>> suffixMemorizationTable;
@@ -109,8 +110,11 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
         long start = System.currentTimeMillis();
         this.logAutomaton = new ImportEventLog().convertLogToAutomatonWithTRFrom(path + "/" + log);
         System.out.println(logAutomaton.eventLabels());
-        //this.modelAutomaton = new ImportProcessModel().createFSMfromBPNMFileWithConversion(path + model, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels()); //createFSMfromPNMLFile(path + "/" + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
-        this.modelAutomaton = new ImportProcessModel().createAutomatonFromPNMLorBPMNFile(path + "/" + model, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+
+        var ipm = new ImportProcessModel();
+        modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+        originalModelAutomaton = ipm.originalModel;
+
         System.out.println(modelAutomaton.eventLabels());
         psp = new PSP(logAutomaton, modelAutomaton);
         calculateOneOptimalAlignmentsWithTRreductionAndTraceEquivalence(stateLimit);
@@ -2737,4 +2741,8 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
         pw1.close();
         pw2.close();
     }
+
+    public Automaton getOriginalModelAutomaton() { return originalModelAutomaton; }
+
+    public Automaton getModelAutomaton() { return modelAutomaton; }
 }

@@ -559,7 +559,7 @@ public class ImportProcessModel
 		}
 		else
 		{
-			iEvent = eventLabels.size();
+			iEvent = eventLabels.size() + 1;
 			this.eventLabelMapping = HashBiMap.create(eventLabels);
 		}
 
