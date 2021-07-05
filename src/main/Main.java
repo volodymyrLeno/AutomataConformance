@@ -55,14 +55,24 @@ import javax.swing.plaf.synth.SynthEditorPaneUI;
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		String model = "models/Loan Application.bpmn";
-		String log = "logs/Loan Application.xes";
+		//String model = "models/test4.bpmn";
+		//String log = "logs/multipleStarts.xes";
+
+		String model = "models/multipleStarts.bpmn";
+		String log = "logs/diagram6.1.xes";
 		String path = "C:/Volodymyr/TEST/";
 
+		long start = System.nanoTime();
         ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
-		System.out.println();
+		long end = System.nanoTime();
+		System.out.println("Conformance checking: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
-		AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton(), 2);
+		start = System.nanoTime();
+		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
+		end = System.nanoTime();
+		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
+
+		System.out.println();
 
 		/*FastList<String> paths = new FastList<>();
 		paths.add("/Users/dreissner/Documents/Evaluations/TandemRepeatsPaper/public/IM/");

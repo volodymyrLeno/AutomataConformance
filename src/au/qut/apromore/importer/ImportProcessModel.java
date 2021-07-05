@@ -543,7 +543,6 @@ public class ImportProcessModel
 		return model;
 	}
 
-
 	public Automaton convertReachabilityGraphToFSM(ReachabilityGraph rg, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping) throws  IOException
 	{
 		LinkedHashMap<Integer, au.qut.apromore.automaton.State> originalStateMapping = new LinkedHashMap<>();
