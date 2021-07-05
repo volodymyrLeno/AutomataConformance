@@ -20,16 +20,6 @@ public class AlignmentPostprocessor {
     private static List<Integer> gatewayIDs;
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
-    private static List<Transition> avoid;
-    private static Stack<Transition> path;
-    private static State currentState;
-    private static int i;
-    private static List<Object> nodeInstances;
-    private static List<StepTypes> stepTypes;
-    private static String step;
-    private static int stepID;
-    private static StepTypes stepType;
-
     public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton){
 
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
@@ -54,18 +44,18 @@ public class AlignmentPostprocessor {
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 
-        currentState = automaton.source();
-        nodeInstances = new ArrayList<>();
-        stepTypes = new ArrayList<>();
-        avoid = new ArrayList<>();
-        path = new Stack<>();
+        State currentState = automaton.source();
+        List<Object> nodeInstances = new ArrayList<>();
+        List<StepTypes> stepTypes = new ArrayList<>();
+        List<Transition> avoid = new ArrayList<>();
+        Stack<Transition> path = new Stack<>();
 
-        for(i = 0; i < alignment.getStepTypesLst().get(0).size(); i++){
-            stepType = alignment.getStepTypesLst().get(0).get(i);
-            step = alignment.getNodeInstanceLst().get(0).get(i).toString();
+        for(int i = 0; i < alignment.getStepTypesLst().get(0).size(); i++){
+            var stepType = alignment.getStepTypesLst().get(0).get(i);
+            var step = alignment.getNodeInstanceLst().get(0).get(i).toString();
 
             if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
-                stepID = automaton.inverseEventLabels().get(step);
+                var stepID = automaton.inverseEventLabels().get(step);
                 LinkedHashMap<Transition, List<Transition>> info = gatewaysInfo.get(currentState);
 
                 var availableTransitions = info.keySet().stream().filter(transition -> transition != null &&
@@ -79,11 +69,46 @@ public class AlignmentPostprocessor {
                 if(idx != -1)
                     nextTransition = availableTransitions.get(idx);
                 else{
-                    nextTransition = getAllowedTransition(automaton, stepID, alignment);
-                    stepType = alignment.getStepTypesLst().get(0).get(i);
-                    step = alignment.getNodeInstanceLst().get(0).get(i).toString();
-                    stepID = automaton.inverseEventLabels().get(step);
-                    info = gatewaysInfo.get(currentState);
+                    while(idx == -1){
+                        var lastTransition = path.pop();
+                        avoid.add(lastTransition);
+
+                        if(!gatewayIDs.contains(lastTransition.eventID())){
+                            for(int j = i; j >= 0; j--){
+                                stepType = alignment.getStepTypesLst().get(0).get(j);
+                                if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
+                                    i--;
+                                    break;
+                                }
+                                else
+                                    i--;
+                            }
+                        }
+
+                        for(int j = i; j >= 0; j--){
+                            stepType = alignment.getStepTypesLst().get(0).get(j);
+                            if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
+                                step = alignment.getNodeInstanceLst().get(0).get(j).toString();
+                                stepID = automaton.inverseEventLabels().get(step);
+                                break;
+                            }
+                        }
+
+                        var lastMove = automaton.eventLabels().get(lastTransition.eventID());
+
+                        var lastIndex = nodeInstances.lastIndexOf(lastMove);
+                        nodeInstances.remove(lastIndex);
+                        stepTypes.remove(lastIndex);
+
+                        currentState = lastTransition.source();
+                        info = gatewaysInfo.get(currentState);
+                        availableTransitions = info.keySet().stream().filter(transition -> transition != null &&
+                                !avoid.contains(transition)).collect(Collectors.toList());
+                        availableMoves = availableTransitions.stream().map(Transition::eventID).collect(Collectors.toList());
+                        idx = availableMoves.indexOf(stepID);
+                    }
+
+                    nextTransition = availableTransitions.get(idx);
                 }
 
                 for (Transition transition: info.get(nextTransition)) {
@@ -135,49 +160,6 @@ public class AlignmentPostprocessor {
         enhancedAlignment.setInfo(alignment.getInfo());
         enhancedAlignment.setTraceIndex(alignment.getTraceIndex());
         return enhancedAlignment;
-    }
-
-    private static Transition getAllowedTransition(Automaton automaton, Integer moveID, AllSyncReplayResult alignment){
-        var lastTransition = path.pop();
-        avoid.add(lastTransition);
-
-        if(!gatewayIDs.contains(lastTransition.eventID())){
-            for(int j = i; j >= 0; j--){
-                var stepType = alignment.getStepTypesLst().get(0).get(j);
-                if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
-                    i--;
-                    break;
-                }
-                else
-                    i--;
-            }
-        }
-
-        for(int j = i; j >= 0; j--){
-            var stepType = alignment.getStepTypesLst().get(0).get(j);
-            if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
-                moveID = automaton.inverseEventLabels().get(alignment.getNodeInstanceLst().get(0).get(j));
-                break;
-            }
-        }
-
-        var lastMove = automaton.eventLabels().get(lastTransition.eventID());
-
-        var lastIndex = nodeInstances.lastIndexOf(lastMove);
-        nodeInstances.remove(lastIndex);
-        stepTypes.remove(lastIndex);
-
-        currentState = lastTransition.source();
-        LinkedHashMap<Transition, List<Transition>> info = gatewaysInfo.get(currentState);
-        var availableTransitions = info.keySet().stream().filter(transition -> transition != null &&
-                !avoid.contains(transition)).collect(Collectors.toList());
-        var availableMoves = availableTransitions.stream().map(Transition::eventID).collect(Collectors.toList());
-        int idx = availableMoves.indexOf(moveID);
-
-        if(idx != -1)
-            return availableTransitions.get(idx);
-        else
-            return getAllowedTransition(automaton, moveID, alignment);
     }
 
     private static State executeMove(Automaton automaton, State currentState, String move){

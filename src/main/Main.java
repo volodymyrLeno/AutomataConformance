@@ -58,8 +58,8 @@ public class Main {
 		//String model = "models/test4.bpmn";
 		//String log = "logs/multipleStarts.xes";
 
-		String model = "Fixed_Models/BPI_Challenge_2012_W_Two_TS.bpmn";
-		String log = "logs/BPI_Challenge_2012_W_Two_TS.xes";
+		String model = "models/Hospital_Billing.bpmn";
+		String log = "logs/Hospital_Billing.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		long start = System.nanoTime();
