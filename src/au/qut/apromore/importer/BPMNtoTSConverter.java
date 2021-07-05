@@ -51,6 +51,7 @@ public class BPMNtoTSConverter {
         bitMasks = computeBitMasks();
 
         getInitialMarking();
+
         var next = toBeVisited.poll();
         while(next != null){
             visit(next);
@@ -61,13 +62,23 @@ public class BPMNtoTSConverter {
     }
 
     private void getInitialMarking(){
-        for(Map.Entry<Integer, Flow> flow: labeledFlows.entrySet()){
-            var value = flow.getValue();
-            if(isStart(value.getSource())){
-                BitSet marking = new BitSet();
-                marking.set(flow.getKey());
-                toBeVisited.add(marking);
-                rg.addState(marking);
+        var startEvents = diagram.getEvents().stream().filter(this::isStartEvent).collect(Collectors.toList());
+
+        if(startEvents.size() > 1)
+            rg.addState(new BitSet());
+
+        for(var startEvent: startEvents){
+            var flows = this.diagram.getOutEdges(startEvent);
+            BitSet marking = new BitSet();
+            for(var flow: flows){
+                marking.set(invertedLabeledFlows.get(flow));
+            }
+            toBeVisited.add(marking);
+            rg.addState(marking);
+
+            if(startEvents.size() > 1){
+                rg.addTransition(new BitSet(), marking, startEvent);
+                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event");
             }
         }
     }
@@ -140,8 +151,7 @@ public class BPMNtoTSConverter {
                 m.set(prev);
                 alreadyVisited.add(prev);
                 var source = labeledFlows.get(prev).getSource();
-                if(!isStart(source) && !source.equals(node)){
-                //if((!isORGateway(source) || diagram.getInEdges(source).size() == 1) && !isStart(source)){
+                if(!isStartEvent(source) && !source.equals(node)){
                     for(var flow: diagram.getInEdges(source)){
                         int i = invertedLabeledFlows.get(flow);
                         if(!alreadyVisited.contains(i)){
@@ -171,7 +181,7 @@ public class BPMNtoTSConverter {
     private void visit(BitSet activeMarking){
         var enabledElements = enabledElements(activeMarking);
         for(var element: enabledElements)
-            if(!isEnd(element))
+            if(!isEndEvent(element))
                 fire(activeMarking, element);
     }
 
@@ -283,7 +293,7 @@ public class BPMNtoTSConverter {
                 updateReachabilityGraph(activeMarking, node, newMarking, oldFlows, true);
             }
         }
-        else if(!isXORGateway(node)){
+        else if(!isXORGateway(node) && !isEventBasedGateway(node)){
             BitSet newMarking = (BitSet) activeMarking.clone();
 
             for(int idx: newFlows)
@@ -327,15 +337,16 @@ public class BPMNtoTSConverter {
             if(!rg.getStates().contains(newMarking)){
                 rg.addState(newMarking);
                 toBeVisited.add(newMarking);
+                System.out.println(rg.getStates().size());
             }
 
             if(invisibleTransition){
                 rg.addTransition(activeMarking, newMarking, node);
 
-                //String label = ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getId().toString();
-
-                String label = "gateway " + ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getAttributeMap().get("Original id").toString();
-                rg.findTransition(activeMarking, newMarking, node).setLabel(label);
+                if(isGateway(node)){
+                    String label = "gateway " + ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getAttributeMap().get("Original id").toString();
+                    rg.findTransition(activeMarking, newMarking, node).setLabel(label);
+                }
             }
             else
                 rg.addTransition(activeMarking, newMarking, node);
@@ -503,18 +514,27 @@ public class BPMNtoTSConverter {
     }
 
 
-    private boolean isStart(BPMNNode node){
+    private boolean isStartEvent(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
                 ((Event) node).getEventType().name().equals("START");
     }
 
-    private boolean isEnd(BPMNNode node){
+    private boolean isEndEvent(BPMNNode node){
         return  node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
                 ((Event) node).getEventType().name().equals("END");
     }
 
+    private boolean isIntermediateEvent(BPMNNode node){
+        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
+                ((Event) node).getEventType().name().equals("INTERMEDIATE");
+    }
+
     private boolean isActivity(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Activity;
+    }
+
+    private boolean isGateway(BPMNNode node){
+        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
     }
 
     private boolean isXORGateway(BPMNNode node){
@@ -530,5 +550,10 @@ public class BPMNtoTSConverter {
     private boolean isORGateway(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("INCLUSIVE");
+    }
+
+    private boolean isEventBasedGateway(BPMNNode node){
+        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
+                ((Gateway) node).getGatewayType().name().equals("EVENTBASED");
     }
 }
