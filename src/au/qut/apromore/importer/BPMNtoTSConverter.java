@@ -78,7 +78,7 @@ public class BPMNtoTSConverter {
 
             if(startEvents.size() > 1){
                 rg.addTransition(new BitSet(), marking, startEvent);
-                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event");
+                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event " + startEvent.getId());
             }
         }
     }
@@ -555,5 +555,9 @@ public class BPMNtoTSConverter {
     private boolean isEventBasedGateway(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("EVENTBASED");
+    }
+
+    private boolean isEvent(BPMNNode node){
+        return node instanceof  org.processmining.models.graphbased.directed.bpmn.elements.Event;
     }
 }

@@ -58,19 +58,19 @@ public class Main {
 		//String model = "models/test4.bpmn";
 		//String log = "logs/multipleStarts.xes";
 
-		String model = "models/simple.bpmn";
-		String log = "logs/simple.xes";
+		String model = "Fixed_Models/BPI_Challenge_2012_W_Two_TS.bpmn";
+		String log = "logs/BPI_Challenge_2012_W_Two_TS.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		long start = System.nanoTime();
-		TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
-		//ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
+		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
+		ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
 		long end = System.nanoTime();
 		System.out.println("Conformance checking: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
 		start = System.nanoTime();
-		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
-		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton());
+		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
+		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton());
 		end = System.nanoTime();
 		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
