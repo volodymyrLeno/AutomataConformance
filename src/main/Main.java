@@ -58,8 +58,8 @@ public class Main {
 		//String model = "models/test4.bpmn";
 		//String log = "logs/multipleStarts.xes";
 
-		String model = "models/Hospital_Billing.bpmn";
-		String log = "logs/Hospital_Billing.xes";
+		String model = "models/Loan Application.bpmn";
+		String log = "logs/Loan Application.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		long start = System.nanoTime();
@@ -74,6 +74,8 @@ public class Main {
 		end = System.nanoTime();
 		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
+		var alignments = confChecker.traceAlignmentsMapping;
+		
 		System.out.println();
 
 		/*FastList<String> paths = new FastList<>();

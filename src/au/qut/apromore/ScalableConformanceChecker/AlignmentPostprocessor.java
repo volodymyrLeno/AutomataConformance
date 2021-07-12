@@ -29,18 +29,26 @@ public class AlignmentPostprocessor {
         gatewaysInfo = computeGatewaysInfo(originalAutomaton);
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
+            try{
+                var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton);
+                enhancedAlignments.put(entry.getKey(), enhancedAlignment);
+            }
+            catch(Exception e){
+                notParsableAlignments.put(entry.getKey(), entry.getValue());
+            }
+/*
             var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton);
             if(enhancedAlignment != null)
                 enhancedAlignments.put(entry.getKey(), enhancedAlignment);
             else
-                notParsableAlignments.put(entry.getKey(), entry.getValue());
+                notParsableAlignments.put(entry.getKey(), entry.getValue());*/
         }
 
         return enhancedAlignments;
     }
 
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton){
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton) throws Exception {
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 

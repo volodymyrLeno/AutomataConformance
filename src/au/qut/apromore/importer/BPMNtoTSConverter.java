@@ -78,7 +78,7 @@ public class BPMNtoTSConverter {
 
             if(startEvents.size() > 1){
                 rg.addTransition(new BitSet(), marking, startEvent);
-                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event " + startEvent.getId());
+                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event " + startEvent.getAttributeMap().get("Original id"));
             }
         }
     }
@@ -337,14 +337,19 @@ public class BPMNtoTSConverter {
             if(!rg.getStates().contains(newMarking)){
                 rg.addState(newMarking);
                 toBeVisited.add(newMarking);
-                System.out.println(rg.getStates().size());
             }
 
             if(invisibleTransition){
                 rg.addTransition(activeMarking, newMarking, node);
 
                 if(isGateway(node)){
-                    String label = "gateway " + ((Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier()).getAttributeMap().get("Original id").toString();
+                    Gateway gateway = (Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
+                    String label = "gateway " + gateway.getAttributeMap().get("Original id").toString();
+                    rg.findTransition(activeMarking, newMarking, node).setLabel(label);
+                }
+                else if(isEvent(node)){
+                    Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
+                    String label = "event " + event.getAttributeMap().get("Original id").toString();
                     rg.findTransition(activeMarking, newMarking, node).setLabel(label);
                 }
             }
@@ -513,6 +518,13 @@ public class BPMNtoTSConverter {
         isVisited[u] = false;
     }
 
+    private boolean isActivity(BPMNNode node){
+        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Activity;
+    }
+
+    private boolean isEvent(BPMNNode node){
+        return node instanceof  org.processmining.models.graphbased.directed.bpmn.elements.Event;
+    }
 
     private boolean isStartEvent(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
@@ -527,10 +539,6 @@ public class BPMNtoTSConverter {
     private boolean isIntermediateEvent(BPMNNode node){
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
                 ((Event) node).getEventType().name().equals("INTERMEDIATE");
-    }
-
-    private boolean isActivity(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Activity;
     }
 
     private boolean isGateway(BPMNNode node){
@@ -552,12 +560,8 @@ public class BPMNtoTSConverter {
                 ((Gateway) node).getGatewayType().name().equals("INCLUSIVE");
     }
 
-    private boolean isEventBasedGateway(BPMNNode node){
+    private boolean isEventBasedGateway(BPMNNode node) {
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("EVENTBASED");
-    }
-
-    private boolean isEvent(BPMNNode node){
-        return node instanceof  org.processmining.models.graphbased.directed.bpmn.elements.Event;
     }
 }

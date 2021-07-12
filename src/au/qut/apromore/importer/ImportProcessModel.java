@@ -535,6 +535,16 @@ public class ImportProcessModel
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
 
+		Map<BPMNNode, String> id2nodeInversed = new HashMap<>();
+		for(Map.Entry<String, BPMNNode> entry : id2node.entrySet()){
+			if(!entry.getKey().startsWith("Flow"))
+				id2nodeInversed.put(entry.getValue(), entry.getKey());
+		}
+
+		for(var event: newDiagram.getEvents()){
+			event.getAttributeMap().put("Original id", id2nodeInversed.get(event));
+		}
+
 		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
 		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(newDiagram);
 		model = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
