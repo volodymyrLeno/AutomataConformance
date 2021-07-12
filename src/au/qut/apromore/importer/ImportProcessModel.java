@@ -550,6 +550,7 @@ public class ImportProcessModel
 		model = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
 		long modelTime = System.nanoTime();
 		System.out.println("Model automaton creation: " + TimeUnit.MILLISECONDS.convert((modelTime - start), TimeUnit.NANOSECONDS) + "ms");
+		System.out.println("States: " + originalModel.states().size());
 		return model;
 	}
 

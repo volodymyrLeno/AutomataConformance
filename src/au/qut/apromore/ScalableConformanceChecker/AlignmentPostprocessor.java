@@ -36,19 +36,13 @@ public class AlignmentPostprocessor {
             catch(Exception e){
                 notParsableAlignments.put(entry.getKey(), entry.getValue());
             }
-/*
-            var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton);
-            if(enhancedAlignment != null)
-                enhancedAlignments.put(entry.getKey(), enhancedAlignment);
-            else
-                notParsableAlignments.put(entry.getKey(), entry.getValue());*/
         }
 
         return enhancedAlignments;
     }
 
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton) throws Exception {
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton) {
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 

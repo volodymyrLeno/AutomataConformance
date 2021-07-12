@@ -1,14 +1,12 @@
 package au.qut.apromore.importer;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.processmining.models.graphbased.directed.bpmn.BPMNNode;
 import org.processmining.models.graphbased.directed.bpmn.elements.Event;
 import org.processmining.models.graphbased.directed.bpmn.elements.Flow;
 import org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
 import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
-import org.processmining.models.graphbased.directed.transitionsystem.State;
-import org.processmining.models.graphbased.directed.transitionsystem.Transition;
-import weka.classifiers.rules.DecisionTable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,6 +30,9 @@ public class BPMNtoTSConverter {
     ReachabilityGraph rg;
     BPMNDiagram diagram;
 
+    BitSet allowedFlows;
+
+    HashMap<ImmutablePair<BPMNNode, BPMNNode>, HashMap<Integer, BitSet>> waitForFlows;
 
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
         this.diagram = diagram;
@@ -51,6 +52,9 @@ public class BPMNtoTSConverter {
         bitMasks = computeBitMasks();
 
         getInitialMarking();
+
+        identifyFlowsToWait();
+        allowedFlows = getAllowedFlows();
 
         var next = toBeVisited.poll();
         while(next != null){
@@ -199,66 +203,70 @@ public class BPMNtoTSConverter {
         return enabledElements;
     }
 
-    private boolean enabled(BitSet activeMarking, BPMNNode node){
-        if(!orJoins.contains(node)){
+    private boolean enabled(BitSet activeMarking, BPMNNode node) {
+        if (!orJoins.contains(node)) {
             var bitMask = bitMasks.get(node);
-            if(bitMask.size() > 1){
-                for(BitSet mask: bitMask){
+            if (bitMask.size() > 1) {
+                for (BitSet mask : bitMask) {
                     BitSet m = (BitSet) activeMarking.clone();
                     m.and(mask);
-                    if(m.equals(mask))
+                    if (m.equals(mask))
                         return true;
                 }
                 return false;
-            }
-            else{
+            } else {
                 BitSet m = (BitSet) activeMarking.clone();
                 BitSet mask = (BitSet) bitMask.toArray()[0];
                 m.and(mask);
                 return m.equals(mask);
             }
-        }
-        else{
-            if(isPartiallyEnabled(activeMarking, node)){
+        } else {
+            if (isPartiallyEnabled(activeMarking, node)) {
                 var mask = orJoinGatewayBitMasks.get(node);
-                for(int key: mask.keySet()){
-                    if(!activeMarking.get(key)){
+                for (int key : mask.keySet()) {
+                    if (!activeMarking.get(key)) {
                         BitSet m = (BitSet) activeMarking.clone();
                         m.and(mask.get(key));
-                        if(m.cardinality() > 0) {
+                        if (m.cardinality() > 0) {
 
-                            if(!structuralConflicts.containsKey(node))
+                            if (!structuralConflicts.containsKey(node))
                                 return false;
-                            else{
-                                int dest = invertedLabeledFlows.get(this.diagram.getOutEdges(node).iterator().next());
-                                var conflictingGateways = structuralConflicts.get(node);
+                            else {
+                                m.andNot(allowedFlows);
+                                if(m.cardinality() > 0)
+                                    return false;
+                                else{
+                                    List<BPMNNode> partiallyEnabledGateways = new ArrayList<>();
+                                    for (var conflictingGateway: structuralConflicts.get(node)) {
+                                        if (isPartiallyEnabled(activeMarking, conflictingGateway))
+                                            partiallyEnabledGateways.add(conflictingGateway);
+                                    }
 
-                                for(var gateway: conflictingGateways){
-                                    if(isPartiallyEnabled(activeMarking, gateway)){
-
-                                        for(int incomingFlow: orJoinGatewayBitMasks.get(gateway).keySet()){
-                                            if(!activeMarking.get(incomingFlow)){
-                                                var pathMasks = getPaths(incomingFlow, dest);
-                                                for(var pathMask: pathMasks){
+                                    if(partiallyEnabledGateways.size() == 0)
+                                        return false;
+                                    else{
+                                        for(var conflictingGateway: partiallyEnabledGateways){
+                                            ImmutablePair<BPMNNode, BPMNNode> pair = new ImmutablePair<>(conflictingGateway, node);
+                                            for (int incomingFlow : orJoinGatewayBitMasks.get(conflictingGateway).keySet()) {
+                                                if (!activeMarking.get(incomingFlow)) {
+                                                    var waitForFlowsMask = waitForFlows.get(pair).get(incomingFlow);
                                                     m = (BitSet) activeMarking.clone();
-                                                    m.and(pathMask);
-                                                    if(m.cardinality() == 0)
-                                                        return true;
+                                                    m.and(waitForFlowsMask);
+                                                    if (m.cardinality() != 0)
+                                                        return false;
                                                 }
                                             }
                                         }
                                     }
-                                    else
-                                        return false;
                                 }
-                                return false;
                             }
                         }
                     }
                 }
+                return true;
             }
-
-            return true;
+            else
+                return false;
         }
     }
 
@@ -337,6 +345,7 @@ public class BPMNtoTSConverter {
             if(!rg.getStates().contains(newMarking)){
                 rg.addState(newMarking);
                 toBeVisited.add(newMarking);
+                System.out.println(rg.getStates().size());
             }
 
             if(invisibleTransition){
@@ -344,12 +353,12 @@ public class BPMNtoTSConverter {
 
                 if(isGateway(node)){
                     Gateway gateway = (Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                    String label = "gateway " + gateway.getAttributeMap().get("Original id").toString();
+                    String label = "gateway " + gateway.getAttributeMap().get("Original id");
                     rg.findTransition(activeMarking, newMarking, node).setLabel(label);
                 }
                 else if(isEvent(node)){
                     Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                    String label = "event " + event.getAttributeMap().get("Original id").toString();
+                    String label = "event " + event.getAttributeMap().get("Original id");
                     rg.findTransition(activeMarking, newMarking, node).setLabel(label);
                 }
             }
@@ -465,7 +474,7 @@ public class BPMNtoTSConverter {
     }
 
 
-    private List<BitSet> getPaths(int source, int destination){
+    private List<BitSet> getPaths(int source, int destination, int forbiddenToTraverse){
         List<List<Integer>> paths = new ArrayList<>();
         List<BitSet> pathMasks = new ArrayList<>();
 
@@ -474,7 +483,7 @@ public class BPMNtoTSConverter {
 
         // add source to path[]
         pathList.add(source);
-        getAllPathsUtil(source, destination, isVisited, pathList, paths);
+        getAllPathsUtil(source, destination, isVisited, pathList, paths, forbiddenToTraverse);
 
         for(var path: paths){
             BitSet pathMask = new BitSet(labeledFlows.size());
@@ -486,7 +495,7 @@ public class BPMNtoTSConverter {
         return pathMasks;
     }
 
-    private void getAllPathsUtil(int u, int d, boolean[] isVisited, List<Integer> localPathList, List<List<Integer>> globalPathList) {
+    private void getAllPathsUtil(int u, int d, boolean[] isVisited, List<Integer> localPathList, List<List<Integer>> globalPathList, int forbiddenToTraverse) {
 
         if (u == d) {
             globalPathList.add(new ArrayList<>(localPathList));
@@ -498,15 +507,15 @@ public class BPMNtoTSConverter {
         // Recur for all the vertices
         // adjacent to current vertex
 
-        var currentNode = labeledFlows.get(u).getSource();
-        var adjacentFlows = this.diagram.getInEdges(currentNode).stream().map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
+        var currentNode = labeledFlows.get(u).getTarget();
+        var adjacentFlows = this.diagram.getOutEdges(currentNode).stream().map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
 
         for (Integer i : adjacentFlows) {
-            if (!isVisited[i]) {
+            if (!isVisited[i] && i != forbiddenToTraverse) {
                 // store current node
                 // in path[]
                 localPathList.add(i);
-                getAllPathsUtil(i, d, isVisited, localPathList, globalPathList);
+                getAllPathsUtil(i, d, isVisited, localPathList, globalPathList, forbiddenToTraverse);
 
                 // remove current node
                 // in path[]
@@ -516,6 +525,40 @@ public class BPMNtoTSConverter {
 
         // Mark the current node
         isVisited[u] = false;
+    }
+
+    private void identifyFlowsToWait(){
+        waitForFlows = new HashMap<>();
+
+        for(var gateway: structuralConflicts.keySet()){
+            for(var conflictingGateway: structuralConflicts.get(gateway)){
+                int start = invertedLabeledFlows.get(this.diagram.getOutEdges(conflictingGateway).iterator().next());
+                int forbiddenToTraverse = invertedLabeledFlows.get(this.diagram.getOutEdges(gateway).iterator().next());
+                HashMap<Integer, BitSet> waitFor = new HashMap<>();
+                for(int incomingFlow: orJoinGatewayBitMasks.get(gateway).keySet()){
+                    var pathMasks = getPaths(start, incomingFlow, forbiddenToTraverse);
+                    BitSet m = new BitSet(labeledFlows.size());
+                    for(var path: pathMasks){
+                        m.or(path);
+                    }
+
+                    waitFor.put(incomingFlow, m);
+                }
+                ImmutablePair<BPMNNode, BPMNNode> pair = new ImmutablePair<>(gateway, conflictingGateway);
+                waitForFlows.put(pair, waitFor);
+            }
+        }
+    }
+
+    private BitSet getAllowedFlows(){
+        BitSet allowedFlows = new BitSet(labeledFlows.size());
+        for(var gateway: orJoinGatewayBitMasks.keySet()){
+            for(var flow: orJoinGatewayBitMasks.get(gateway).keySet()){
+                allowedFlows.set(flow);
+            }
+        }
+
+        return allowedFlows;
     }
 
     private boolean isActivity(BPMNNode node){
