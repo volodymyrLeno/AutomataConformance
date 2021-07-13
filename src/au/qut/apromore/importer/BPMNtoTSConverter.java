@@ -36,9 +36,7 @@ public class BPMNtoTSConverter {
 
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
         this.diagram = diagram;
-
         structuralConflicts = getStructuralConflicts();
-
         rg = new ReachabilityGraph("");
         toBeVisited = new LinkedList<>();
         labeledFlows = labelFlows(diagram.getFlows());
@@ -68,22 +66,22 @@ public class BPMNtoTSConverter {
     private void getInitialMarking(){
         var startEvents = diagram.getEvents().stream().filter(this::isStartEvent).collect(Collectors.toList());
 
-        if(startEvents.size() > 1)
-            rg.addState(new BitSet());
+        BitSet initialMarking = new BitSet();
+        initialMarking.set(labeledFlows.size());
+        rg.addState(initialMarking);
 
-        for(var startEvent: startEvents){
+        for(var startEvent: startEvents) {
             var flows = this.diagram.getOutEdges(startEvent);
             BitSet marking = new BitSet();
-            for(var flow: flows){
+            for (var flow : flows)
                 marking.set(invertedLabeledFlows.get(flow));
-            }
+
             toBeVisited.add(marking);
             rg.addState(marking);
 
-            if(startEvents.size() > 1){
-                rg.addTransition(new BitSet(), marking, startEvent);
-                rg.findTransition(new BitSet(), marking, startEvent).setLabel("event " + startEvent.getAttributeMap().get("Original id"));
-            }
+            rg.addTransition(initialMarking, marking, startEvent);
+            String label = (startEvent.getLabel() == null || startEvent.getLabel().equals("")) ? "event " + startEvent.getAttributeMap().get("Original id") : startEvent.getLabel();
+            rg.findTransition(initialMarking, marking, startEvent).setLabel(label);
         }
     }
 
@@ -185,8 +183,7 @@ public class BPMNtoTSConverter {
     private void visit(BitSet activeMarking){
         var enabledElements = enabledElements(activeMarking);
         for(var element: enabledElements)
-            if(!isEndEvent(element))
-                fire(activeMarking, element);
+            fire(activeMarking, element);
     }
 
     private LinkedHashSet<BPMNNode> enabledElements(BitSet activeMarking){
@@ -203,7 +200,7 @@ public class BPMNtoTSConverter {
         return enabledElements;
     }
 
-    private boolean enabled(BitSet activeMarking, BPMNNode node) {
+    private boolean enabled(BitSet activeMarking, BPMNNode node){
         if (!orJoins.contains(node)) {
             var bitMask = bitMasks.get(node);
             if (bitMask.size() > 1) {
@@ -337,34 +334,43 @@ public class BPMNtoTSConverter {
     }
 
     private void updateReachabilityGraph(BitSet activeMarking, BPMNNode node, BitSet newMarking,
-                                         List<Integer> oldFlows, Boolean invisibleTransition) {
+                                         List<Integer> oldFlows, Boolean invisibleTransition){
         for(int jdx: oldFlows)
             newMarking.set(jdx, false);
 
-        if(newMarking.cardinality() > 0){
-            if(!rg.getStates().contains(newMarking)){
-                rg.addState(newMarking);
-                toBeVisited.add(newMarking);
-                System.out.println(rg.getStates().size());
-            }
-
-            if(invisibleTransition){
-                rg.addTransition(activeMarking, newMarking, node);
-
-                if(isGateway(node)){
-                    Gateway gateway = (Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                    String label = "gateway " + gateway.getAttributeMap().get("Original id");
-                    rg.findTransition(activeMarking, newMarking, node).setLabel(label);
-                }
-                else if(isEvent(node)){
-                    Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                    String label = "event " + event.getAttributeMap().get("Original id");
-                    rg.findTransition(activeMarking, newMarking, node).setLabel(label);
-                }
-            }
-            else
-                rg.addTransition(activeMarking, newMarking, node);
+        if(!rg.getStates().contains(newMarking)){
+            rg.addState(newMarking);
+            toBeVisited.add(newMarking);
         }
+
+        if(invisibleTransition){
+            rg.addTransition(activeMarking, newMarking, node);
+
+            String label;
+
+            if(isGateway(node)){
+                Gateway gateway = (Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
+
+                if(gateway.getLabel() == null || gateway.getLabel().equals(""))
+                    label = "gateway " + gateway.getAttributeMap().get("Original id");
+                else
+                    label = gateway.getLabel();
+
+                rg.findTransition(activeMarking, newMarking, node).setLabel(label);
+            }
+            else if(isEvent(node)){
+                Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
+
+                if(event.getLabel() == null || event.getLabel().equals(""))
+                    label = "event " + event.getAttributeMap().get("Original id");
+                else
+                    label = event.getLabel();
+
+                rg.findTransition(activeMarking, newMarking, node).setLabel(label);
+            }
+        }
+        else
+            rg.addTransition(activeMarking, newMarking, node);
     }
 
     private HashMap<BPMNNode, BitSet> computeFullEnablement(){
@@ -387,8 +393,7 @@ public class BPMNtoTSConverter {
         comp.add(v);
     }
 
-    private List<Integer> fillOrder(int[][] adjacencyMatrix, boolean[] visited)
-    {
+    private List<Integer> fillOrder(int[][] adjacencyMatrix, boolean[] visited){
         int V = adjacencyMatrix.length;
         List<Integer> order = new ArrayList<>();
 
@@ -408,8 +413,7 @@ public class BPMNtoTSConverter {
         return transposedMatrix;
     }
 
-    public List<List<BPMNNode>> getSCComponents()
-    {
+    public List<List<BPMNNode>> getSCComponents(){
         var nodes = new ArrayList<>(this.diagram.getNodes());
         int N = nodes.size();
 
@@ -481,7 +485,6 @@ public class BPMNtoTSConverter {
         boolean[] isVisited = new boolean[this.diagram.getFlows().size()];
         ArrayList<Integer> pathList = new ArrayList<>();
 
-        // add source to path[]
         pathList.add(source);
         getAllPathsUtil(source, destination, isVisited, pathList, paths, forbiddenToTraverse);
 
@@ -496,34 +499,23 @@ public class BPMNtoTSConverter {
     }
 
     private void getAllPathsUtil(int u, int d, boolean[] isVisited, List<Integer> localPathList, List<List<Integer>> globalPathList, int forbiddenToTraverse) {
-
         if (u == d) {
             globalPathList.add(new ArrayList<>(localPathList));
         }
 
-        // Mark the current node
         isVisited[u] = true;
-
-        // Recur for all the vertices
-        // adjacent to current vertex
 
         var currentNode = labeledFlows.get(u).getTarget();
         var adjacentFlows = this.diagram.getOutEdges(currentNode).stream().map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
 
         for (Integer i : adjacentFlows) {
             if (!isVisited[i] && i != forbiddenToTraverse) {
-                // store current node
-                // in path[]
                 localPathList.add(i);
                 getAllPathsUtil(i, d, isVisited, localPathList, globalPathList, forbiddenToTraverse);
-
-                // remove current node
-                // in path[]
                 localPathList.remove(i);
             }
         }
 
-        // Mark the current node
         isVisited[u] = false;
     }
 
@@ -606,5 +598,25 @@ public class BPMNtoTSConverter {
     private boolean isEventBasedGateway(BPMNNode node) {
         return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("EVENTBASED");
+    }
+
+    private int[][] computeIncidenceMatrix(){
+        Flow[] flows = diagram.getFlows().toArray(Flow[]::new);
+        BPMNNode[] nodes = diagram.getNodes().toArray(BPMNNode[]::new);
+        int[][] incidenceMatrix = new int[flows.length][nodes.length];
+
+        for(int j = 0; j < nodes.length; j++){
+            var node = nodes[j];
+            for(int i = 0; i < flows.length; i++){
+                if(flows[i].getSource().equals(node))
+                    incidenceMatrix[i][j]--;
+                else if(flows[i].getTarget().equals(node))
+                    incidenceMatrix[i][j]++;
+                else
+                    incidenceMatrix[i][j] = 0;
+            }
+        }
+
+        return incidenceMatrix;
     }
 }

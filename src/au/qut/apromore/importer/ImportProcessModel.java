@@ -537,7 +537,7 @@ public class ImportProcessModel
 
 		Map<BPMNNode, String> id2nodeInversed = new HashMap<>();
 		for(Map.Entry<String, BPMNNode> entry : id2node.entrySet()){
-			if(!entry.getKey().startsWith("Flow"))
+			if(!entry.getKey().toLowerCase().startsWith("flow") && !entry.getKey().toLowerCase().startsWith("edge"))
 				id2nodeInversed.put(entry.getValue(), entry.getKey());
 		}
 

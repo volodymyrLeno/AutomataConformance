@@ -21,7 +21,6 @@ public class AlignmentPostprocessor {
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
     public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton){
-
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
         Map<IntArrayList, AllSyncReplayResult> notParsableAlignments = new HashMap<>();
 
@@ -42,7 +41,7 @@ public class AlignmentPostprocessor {
     }
 
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton) {
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton){
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 
@@ -141,16 +140,6 @@ public class AlignmentPostprocessor {
             for(var gateway: gateways){
                 nodeInstances.add(automaton.eventLabels().get(gateway));
                 stepTypes.add(StepTypes.MREAL);
-            }
-        }
-
-        if(automaton.states().get(automaton.sourceID()).label().equals("{}")){
-            for(int i = 0; i < stepTypes.size(); i++){
-                if(stepTypes.get(i) == StepTypes.LMGOOD || stepTypes.get(i) == StepTypes.MREAL){
-                    stepTypes.remove(i);
-                    nodeInstances.remove(i);
-                    break;
-                }
             }
         }
 
