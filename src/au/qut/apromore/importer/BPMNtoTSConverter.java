@@ -35,7 +35,13 @@ public class BPMNtoTSConverter {
     HashMap<ImmutablePair<BPMNNode, BPMNNode>, HashMap<Integer, BitSet>> waitForFlows;
 
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
-        this.diagram = diagram;
+        //this.diagram = diagram;
+
+        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+        this.diagram = bpmnPreprocessor.preprocessModel(diagram);
+
+        var scomps = bpmnPreprocessor.extractScomponents();
+
         structuralConflicts = getStructuralConflicts();
         rg = new ReachabilityGraph("");
         toBeVisited = new LinkedList<>();
