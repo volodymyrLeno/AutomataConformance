@@ -58,8 +58,8 @@ public class Main {
 		//String model = "models/test4.bpmn";
 		//String log = "logs/multipleStarts.xes";
 
-		String model = "models/checkFuture.bpmn";
-		String log = "logs/checkFuture.xes";
+		String model = "models/Loan Application.bpmn";
+		String log = "logs/Loan Application.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		long start = System.nanoTime();

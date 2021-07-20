@@ -1,11 +1,12 @@
 package au.qut.apromore.importer;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
-import org.processmining.models.graphbased.directed.bpmn.BPMNNode;
-import org.processmining.models.graphbased.directed.bpmn.elements.Event;
-import org.processmining.models.graphbased.directed.bpmn.elements.Flow;
-import org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNNode;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Activity;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Event;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Flow;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Gateway;
 import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 
 import java.util.*;
@@ -39,16 +40,15 @@ public class BPMNtoTSConverter {
 
         BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
         this.diagram = bpmnPreprocessor.preprocessModel(diagram);
-
-        var scomps = bpmnPreprocessor.extractScomponents();
-
-        structuralConflicts = getStructuralConflicts();
-        rg = new ReachabilityGraph("");
-        toBeVisited = new LinkedList<>();
         labeledFlows = labelFlows(diagram.getFlows());
         invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
                 collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
 
+        //var scomps = bpmnPreprocessor.extractScomponents();
+
+        structuralConflicts = getStructuralConflicts();
+        rg = new ReachabilityGraph("");
+        toBeVisited = new LinkedList<>();
         orJoinGatewayBitMasks = new LinkedHashMap<>();
         orJoins = new LinkedHashSet<>();
         orSplits = new LinkedHashSet<>();
@@ -77,7 +77,8 @@ public class BPMNtoTSConverter {
         rg.addState(initialMarking);
 
         for(var startEvent: startEvents) {
-            var flows = this.diagram.getOutEdges(startEvent);
+            var flows = this.diagram.getOutEdges(startEvent).stream().filter(f ->
+                    invertedLabeledFlows.containsKey(f)).collect(Collectors.toList());
             BitSet marking = new BitSet();
             for (var flow : flows)
                 marking.set(invertedLabeledFlows.get(flow));
@@ -93,13 +94,13 @@ public class BPMNtoTSConverter {
 
     private LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> computeBitMasks(){
         LinkedHashMap<BPMNNode, LinkedHashSet<BitSet>> bitMasks = new LinkedHashMap<>();
-        var nodes = diagram.getNodes();
+        var nodes = diagram.getNodes().stream().filter(node -> isEvent(node) || isGateway(node) || isActivity(node)).collect(Collectors.toList());
         for(var node: nodes){
             if(!isORGateway(node)){
                 bitMasks.put(node, computeBitMask(node));
             }
             else{
-                if(diagram.getInEdges(node).size() > 1){
+                if(diagram.getInEdges(node).stream().filter(e -> invertedLabeledFlows.containsKey(e)).count() > 1){
                     orJoins.add(node);
                     computeOrJoinGatewayBitMask(node);
                 }
@@ -116,7 +117,7 @@ public class BPMNtoTSConverter {
     private LinkedHashSet<BitSet> computeBitMask(BPMNNode node){
         LinkedHashSet<BitSet> bitMask = new LinkedHashSet<>();
 
-        var inEdges = diagram.getInEdges(node);
+        var inEdges = diagram.getInEdges(node).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList());
         if(inEdges.size() > 1){
             if(isANDGateway(node)){
                 BitSet mask = new BitSet(labeledFlows.size());
@@ -144,7 +145,7 @@ public class BPMNtoTSConverter {
     private void computeOrJoinGatewayBitMask(BPMNNode node){
         LinkedHashMap<Integer, BitSet> mask = new LinkedHashMap<>();
 
-        var inEdges = diagram.getInEdges(node);
+        var inEdges = diagram.getInEdges(node).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList());
         for(var edge: inEdges){
             BitSet m = new BitSet(labeledFlows.size());
             int idx = invertedLabeledFlows.get(edge);
@@ -160,7 +161,7 @@ public class BPMNtoTSConverter {
                 alreadyVisited.add(prev);
                 var source = labeledFlows.get(prev).getSource();
                 if(!isStartEvent(source) && !source.equals(node)){
-                    for(var flow: diagram.getInEdges(source)){
+                    for(var flow: diagram.getInEdges(source).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList())){
                         int i = invertedLabeledFlows.get(flow);
                         if(!alreadyVisited.contains(i)){
                             toBeVisited.add(invertedLabeledFlows.get(flow));
@@ -284,13 +285,13 @@ public class BPMNtoTSConverter {
 
     private void fire(BitSet activeMarking, BPMNNode node){
         List<Integer> newFlows = new ArrayList<>();
-        var outEdges = diagram.getOutEdges(node);
+        var outEdges = diagram.getOutEdges(node).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList());
 
         for(var flow: outEdges)
             newFlows.add(invertedLabeledFlows.get(flow));
 
         List<Integer> oldFlows = new ArrayList<>();
-        var inEdges = diagram.getInEdges(node);
+        var inEdges = diagram.getInEdges(node).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList());
 
         for(var flow: inEdges)
             oldFlows.add(invertedLabeledFlows.get(flow));
@@ -383,7 +384,7 @@ public class BPMNtoTSConverter {
         HashMap<BPMNNode, BitSet> fullEnablements = new HashMap<>();
         for(var orJoin: orJoins){
             BitSet fullEnablement = new BitSet(labeledFlows.size());
-            for(var edge: this.diagram.getInEdges(orJoin))
+            for(var edge: this.diagram.getInEdges(orJoin).stream().filter(e -> invertedLabeledFlows.containsKey(e)).collect(Collectors.toList()))
                 fullEnablement.set(this.invertedLabeledFlows.get(edge));
             fullEnablements.put(orJoin, fullEnablement);
         }
@@ -425,7 +426,8 @@ public class BPMNtoTSConverter {
 
         int[][] adjacencyMatrix = new int[N][N];
         for(int i = 0; i < N; i ++){
-            var outEdges = this.diagram.getOutEdges(nodes.get(i));
+            var outEdges = this.diagram.getOutEdges(nodes.get(i)).stream().filter(e ->
+                    invertedLabeledFlows.containsKey(e)).collect(Collectors.toList());
             for(var edge: outEdges){
                 adjacencyMatrix[i][nodes.indexOf(edge.getTarget())] = 1;
             }
@@ -465,7 +467,7 @@ public class BPMNtoTSConverter {
         var sccs = getSCComponents();
 
         List<BPMNNode> orJoinGateways = this.diagram.getGateways().stream().filter(el -> isORGateway(el) &&
-                this.diagram.getInEdges(el).size() > 1).collect(Collectors.toList());
+                this.diagram.getInEdges(el).stream().filter(e -> invertedLabeledFlows.containsKey(e)).count() > 1).collect(Collectors.toList());
 
         for(var gateway: orJoinGateways){
             List<BPMNNode> gateways = new ArrayList<>();
@@ -512,7 +514,8 @@ public class BPMNtoTSConverter {
         isVisited[u] = true;
 
         var currentNode = labeledFlows.get(u).getTarget();
-        var adjacentFlows = this.diagram.getOutEdges(currentNode).stream().map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
+        var adjacentFlows = this.diagram.getOutEdges(currentNode).stream().filter(e -> invertedLabeledFlows.containsKey(e)).
+                map(el -> this.invertedLabeledFlows.get(el)).collect(Collectors.toList());
 
         for (Integer i : adjacentFlows) {
             if (!isVisited[i] && i != forbiddenToTraverse) {
@@ -530,8 +533,10 @@ public class BPMNtoTSConverter {
 
         for(var gateway: structuralConflicts.keySet()){
             for(var conflictingGateway: structuralConflicts.get(gateway)){
-                int start = invertedLabeledFlows.get(this.diagram.getOutEdges(conflictingGateway).iterator().next());
-                int forbiddenToTraverse = invertedLabeledFlows.get(this.diagram.getOutEdges(gateway).iterator().next());
+                int start = invertedLabeledFlows.get(this.diagram.getOutEdges(conflictingGateway).stream().
+                        filter(e -> invertedLabeledFlows.containsKey(e)).iterator().next());
+                int forbiddenToTraverse = invertedLabeledFlows.get(this.diagram.getOutEdges(gateway).stream().
+                        filter(e -> invertedLabeledFlows.containsKey(e)).iterator().next());
                 HashMap<Integer, BitSet> waitFor = new HashMap<>();
                 for(int incomingFlow: orJoinGatewayBitMasks.get(gateway).keySet()){
                     var pathMasks = getPaths(start, incomingFlow, forbiddenToTraverse);
@@ -560,49 +565,49 @@ public class BPMNtoTSConverter {
     }
 
     private boolean isActivity(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Activity;
+        return node instanceof Activity;
     }
 
     private boolean isEvent(BPMNNode node){
-        return node instanceof  org.processmining.models.graphbased.directed.bpmn.elements.Event;
+        return node instanceof Event;
     }
 
     private boolean isStartEvent(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
+        return node instanceof Event &&
                 ((Event) node).getEventType().name().equals("START");
     }
 
     private boolean isEndEvent(BPMNNode node){
-        return  node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
+        return  node instanceof Event &&
                 ((Event) node).getEventType().name().equals("END");
     }
 
     private boolean isIntermediateEvent(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Event &&
+        return node instanceof Event &&
                 ((Event) node).getEventType().name().equals("INTERMEDIATE");
     }
 
     private boolean isGateway(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway;
+        return node instanceof Gateway;
     }
 
     private boolean isXORGateway(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
+        return node instanceof Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("DATABASED");
     }
 
     private boolean isANDGateway(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
+        return node instanceof Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("PARALLEL");
     }
 
     private boolean isORGateway(BPMNNode node){
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
+        return node instanceof Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("INCLUSIVE");
     }
 
     private boolean isEventBasedGateway(BPMNNode node) {
-        return node instanceof org.processmining.models.graphbased.directed.bpmn.elements.Gateway &&
+        return node instanceof Gateway &&
                 ((Gateway) node).getGatewayType().name().equals("EVENTBASED");
     }
 

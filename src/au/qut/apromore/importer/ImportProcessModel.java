@@ -1,6 +1,7 @@
 package au.qut.apromore.importer;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -18,10 +19,12 @@ import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.AttributeMap;
-import org.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
-import org.processmining.models.graphbased.directed.bpmn.BPMNDiagramFactory;
-import org.processmining.models.graphbased.directed.bpmn.BPMNNode;
-import org.processmining.models.graphbased.directed.bpmn.elements.Swimlane;
+
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagramFactory;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNNode;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Swimlane;
+
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
@@ -30,12 +33,13 @@ import org.processmining.models.graphbased.directed.transitionsystem.Reachabilit
 import org.processmining.models.graphbased.directed.transitionsystem.State;
 import org.processmining.models.graphbased.directed.transitionsystem.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
-import org.processmining.plugins.bpmn.Bpmn;
+import org.apromore.processmining.plugins.bpmn.Bpmn;
+//import org.apromore.processmining.plugins.bpmn.dialogs.BpmnSelectDiagramDialog;
+import org.apromore.processmining.plugins.bpmn.parameters.BpmnSelectDiagramParameters;
+import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.processmining.plugins.bpmn.dialogs.BpmnSelectDiagramDialog;
-import org.processmining.plugins.bpmn.parameters.BpmnSelectDiagramParameters;
-import org.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.processmining.plugins.petrinet.behavioralanalysis.TSGenerator;
-//import org.xmlpull.*;
+
 import org.processmining.plugins.pnml.exporting.PnmlExportNetToPNML;
 import org.processmining.plugins.pnml.importing.PnmlImportNet;
 
@@ -206,7 +210,6 @@ public class ImportProcessModel
 		}
 		else if(extension.equals(".bpmn")) {
 			return createFSMfromBPMNFile(fileName, eventLabelMapping, inverseEventLabelMapping);
-			//return createFSMfromBPNMFileWithConversion(fileName,eventLabelMapping,inverseEventLabelMapping);
 		}
 		else throw new Exception("Wrong filetype - Only .pnml or .bpmn process models are supported");
 
@@ -233,11 +236,14 @@ public class ImportProcessModel
 	public Object[] importPetrinetFromBPMN(String fileName) throws Exception
 	{
 		FakePluginContext context = new FakePluginContext();
-		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
+		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(fileName), fileName);
+		//Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
 		//long start = System.nanoTime();
 		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
 		@SuppressWarnings("unused")
-		BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+
+		//BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+				BpmnSelectDiagramDialog dialog = null;
 		BPMNDiagram newDiagram = BPMNDiagramFactory.newBPMNDiagram("");
 		Map<String, BPMNNode> id2node = new HashMap<String, BPMNNode>();
 		Map<String, Swimlane> id2lane = new HashMap<String, Swimlane>();
@@ -247,7 +253,10 @@ public class ImportProcessModel
 			Collection<String> elements = parameters.getDiagram().getElements();
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
-		Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		//Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		Object[] object = null;
+
+
 		Petrinet pnet = (Petrinet) object[0];
 		
 		int count = 1;
@@ -327,11 +336,13 @@ public class ImportProcessModel
 
 	public void transformAndExportPetriNetFromBPMNFile(String fileName, String exportFileName) throws Exception
 	{
-		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
+		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(fileName), fileName);
+		//Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
 		long start = System.nanoTime();
 		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
 		@SuppressWarnings("unused")
-		BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+		//BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+				BpmnSelectDiagramDialog dialog = null;
 		BPMNDiagram newDiagram = BPMNDiagramFactory.newBPMNDiagram("");
 		Map<String, BPMNNode> id2node = new HashMap<String, BPMNNode>();
 		Map<String, Swimlane> id2lane = new HashMap<String, Swimlane>();
@@ -341,7 +352,8 @@ public class ImportProcessModel
 			Collection<String> elements = parameters.getDiagram().getElements();
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
-		Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		//Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		Object[] object = null;
 		Petrinet pnet = (Petrinet) object[0];
 		int count = 1;
 		for(Place p : pnet.getPlaces()) {
@@ -357,11 +369,13 @@ public class ImportProcessModel
 
 	public au.qut.apromore.automaton.Automaton createFSMfromBPNMFileWithConversion(String fileName, BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping) throws Exception
 	{
-		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
+		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(fileName), fileName);
+		//Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
 		long start = System.nanoTime();
 		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
 		@SuppressWarnings("unused")
-		BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+		//BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
+				BpmnSelectDiagramDialog dialog = null;
 		BPMNDiagram newDiagram = BPMNDiagramFactory.newBPMNDiagram("");
 		Map<String, BPMNNode> id2node = new HashMap<String, BPMNNode>();
 		Map<String, Swimlane> id2lane = new HashMap<String, Swimlane>();
@@ -371,7 +385,8 @@ public class ImportProcessModel
 			Collection<String> elements = parameters.getDiagram().getElements();
 			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
 		}
-		Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		//Object[] object = BPMNToPetriNetConverter.convert(newDiagram);
+		Object[] object = null;
 		Petrinet pnet = (Petrinet) object[0];
 
 		int count = 1;
@@ -520,31 +535,9 @@ public class ImportProcessModel
 
 	public au.qut.apromore.automaton.Automaton createFSMfromBPMNFile(String fileName, BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping) throws Exception
 	{
-		Bpmn bpmn = (Bpmn) new BpmnImportPlugin().importFile(context, fileName);
+		BPMNDiagram newDiagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
+
 		long start = System.nanoTime();
-		BpmnSelectDiagramParameters parameters = new BpmnSelectDiagramParameters();
-		@SuppressWarnings("unused")
-		BpmnSelectDiagramDialog dialog = new BpmnSelectDiagramDialog(bpmn.getDiagrams(), parameters);
-		BPMNDiagram newDiagram = BPMNDiagramFactory.newBPMNDiagram("");
-		Map<String, BPMNNode> id2node = new HashMap<String, BPMNNode>();
-		Map<String, Swimlane> id2lane = new HashMap<String, Swimlane>();
-		if (parameters.getDiagram() == BpmnSelectDiagramParameters.NODIAGRAM) {
-			bpmn.unmarshall(newDiagram, id2node, id2lane);
-		} else {
-			Collection<String> elements = parameters.getDiagram().getElements();
-			bpmn.unmarshall(newDiagram, elements, id2node, id2lane);
-		}
-
-		Map<BPMNNode, String> id2nodeInversed = new HashMap<>();
-		for(Map.Entry<String, BPMNNode> entry : id2node.entrySet()){
-			if(!entry.getKey().toLowerCase().startsWith("flow") && !entry.getKey().toLowerCase().startsWith("edge"))
-				id2nodeInversed.put(entry.getValue(), entry.getKey());
-		}
-
-		for(var event: newDiagram.getEvents()){
-			event.getAttributeMap().put("Original id", id2nodeInversed.get(event));
-		}
-
 		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
 		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(newDiagram);
 		model = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
