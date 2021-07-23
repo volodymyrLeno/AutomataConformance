@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="prom-models-osgi-1.0">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../ApromoreCore/Apromore-OSGI-Bundles/prom-models-osgi/target/prom-models-osgi-1.0.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

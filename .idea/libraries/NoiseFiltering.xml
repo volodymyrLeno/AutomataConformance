@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="NoiseFiltering">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/out/artifacts/NoiseFiltering_jar/NoiseFiltering.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

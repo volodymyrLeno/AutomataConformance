@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="TRConformance">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/out/artifacts/TRConformance_jar/TRConformance.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="TraceAlignmentWithGuideTree">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/Libraries/tracealignmentwithguidetree-6.9.63/TraceAlignmentWithGuideTree.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
