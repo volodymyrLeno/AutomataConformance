@@ -3,9 +3,7 @@ package au.qut.apromore.automaton;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,9 +19,7 @@ import org.eclipse.collections.impl.set.mutable.UnifiedSet;
 import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import org.jgrapht.DirectedGraph;
 import org.jgrapht.graph.DefaultDirectedGraph;
-import org.jgraph.JGraph;
 import org.jgraph.graph.DefaultEdge;
-import org.jgraph.graph.Edge;
 
 import com.google.common.collect.BiMap;
 
@@ -54,19 +50,19 @@ import com.google.common.collect.BiMap;
 
 public class Automaton {
 
-	private Map<Integer, State> states;
+	private final Map<Integer, State> states;
 	private BiMap<Integer, String> eventLabels;
 	private BiMap<String, Integer> inverseEventLabels;
 	private BiMap<Integer, String> globalEventLabels;
 	private BiMap<String,Integer> globalInverseLabels;
-	private Map<Integer, Transition> transitions;
-	private int source;
-	private IntHashSet finalStates;
+	private final Map<Integer, Transition> transitions;
+	private final int source;
+	private final IntHashSet finalStates;
 	private Set<IntIntHashMap> finalConfigurations;
 	public static final int skipEvent = -2;
 	public FastList<IntArrayList> cases;
 	public UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping;
-	public Map<IntArrayList, Integer> caseFrequencies = new HashMap<IntArrayList, Integer>();
+	public Map<IntArrayList, Integer> caseFrequencies = new HashMap<>();
 	private int minNumberOfModelMoves = Integer.MAX_VALUE;
 	private Map<IntIntHashMap, List<IntArrayList>> configCaseMapping;
 	public Map<Integer, String> caseIDs;
@@ -91,8 +87,7 @@ public class Automaton {
 	}
 
 	public Automaton(Map<Integer, State> states, BiMap<Integer, String> labelMapping, BiMap<String, Integer> inverseLabelMapping, Map<Integer, Transition> transitions,
-			int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs) throws IOException
-	{
+			int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs) {
 		this.states = states;
 		this.eventLabels = labelMapping;
 		this.inverseEventLabels = inverseLabelMapping;
@@ -117,8 +112,7 @@ public class Automaton {
 	}
 
 	public Automaton(Map<Integer, State> states, BiMap<Integer, String> labelMapping, BiMap<String, Integer> inverseLabelMapping, Map<Integer, Transition> transitions,
-					 int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs, UnifiedMap<IntArrayList,IntObjectHashMap<UnifiedSet<DecodeTandemRepeats>>> reductions, UnifiedMap<IntIntHashMap, UnifiedSet<IntArrayList>> configReducedTraceMapping) throws IOException
-	{
+					 int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs, UnifiedMap<IntArrayList,IntObjectHashMap<UnifiedSet<DecodeTandemRepeats>>> reductions, UnifiedMap<IntIntHashMap, UnifiedSet<IntArrayList>> configReducedTraceMapping) {
 		this.states = states;
 		this.eventLabels = labelMapping;
 		this.inverseEventLabels = inverseLabelMapping;
@@ -145,7 +139,7 @@ public class Automaton {
 	}
 
 	public Automaton(Map<Integer, State> states, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseLabelMapping, Map<Integer, Transition> transitions,
-			int initialState, IntHashSet finalStates, int skipEvent) throws IOException
+			int initialState, IntHashSet finalStates, int skipEvent)
 	{
 		this.states = states;
 		this.eventLabels = eventLabels;
@@ -169,9 +163,7 @@ public class Automaton {
 	}
 	
 	public Automaton(BiMap<Integer, State> states, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping,
-			BiMap<Integer, Transition> transitions, int initialState, IntHashSet finalStates, int skipEvent, BiMap<Integer, String> globalEventLabels) 
-					throws FileNotFoundException 
-	{
+			BiMap<Integer, Transition> transitions, int initialState, IntHashSet finalStates, int skipEvent, BiMap<Integer, String> globalEventLabels) {
 		this.states = states;
 		this.eventLabels = eventLabels;
 		this.inverseEventLabels = inverseEventLabelMapping;
@@ -233,13 +225,13 @@ public class Automaton {
 	
 	public int skipEvent()
 	{
-		return this.skipEvent;
+		return skipEvent;
 	}
 	
 	public Map<IntIntHashMap, List<IntArrayList>> configCasesMapping()
 	{
 		if(this.configCaseMapping==null)
-			this.configCaseMapping = new UnifiedMap<IntIntHashMap, List<IntArrayList>>();
+			this.configCaseMapping = new UnifiedMap<>();
 		return this.configCaseMapping;
 	}
 
@@ -250,7 +242,7 @@ public class Automaton {
 			dGr.addVertex(st);
 		for(Transition tr : this.transitions.values())
 			dGr.addEdge(tr.source(), tr.target());
-		List<List<State>> cycles = new SzwarcfiterLauerSimpleCycles<State, DefaultEdge>(dGr).findSimpleCycles();
+		List<List<State>> cycles = new SzwarcfiterLauerSimpleCycles<>(dGr).findSimpleCycles();
 		return cycles.size();
 
 	}
@@ -331,10 +323,10 @@ public class Automaton {
 			components[scc.id(state.id())].add(state.id());
 			state.setComponent(scc.id(state.id()));
 		}
-		IntObjectHashMap<List<Transition>> compInArcs = new IntObjectHashMap<List<Transition>>();
+		IntObjectHashMap<List<Transition>> compInArcs = new IntObjectHashMap<>();
 		IntObjectHashMap<List<Transition>> compOutArcs = new IntObjectHashMap<List<Transition>>();
 		IntObjectHashMap<List<Transition>> compArcs = new IntObjectHashMap<List<Transition>>();
-		IntObjectHashMap<IntIntHashMap> cLoopLabels = new IntObjectHashMap<IntIntHashMap>();
+		IntObjectHashMap<IntIntHashMap> cLoopLabels = new IntObjectHashMap<>();
 		List<Transition> inArcs;
 		List<Transition> outArcs;
 		List<Transition> cArcs;
@@ -348,7 +340,7 @@ public class Automaton {
 //					state.isLoopState = true;
 				if((inArcs = compInArcs.get(state.component()))==null)
 				{
-					inArcs = new FastList<Transition>();
+					inArcs = new FastList<>();
 					compInArcs.put(state.component(), inArcs);
 				}
 				for(Transition in : state.incomingTransitions())
@@ -359,12 +351,12 @@ public class Automaton {
 				}
 				if((outArcs = compOutArcs.get(state.component()))==null)
 				{
-					outArcs = new FastList<Transition>();
+					outArcs = new FastList<>();
 					compOutArcs.put(state.component(), outArcs);
 				}
 				if((cArcs = compArcs.get(state.component()))==null)
 				{
-					cArcs = new FastList<Transition>();
+					cArcs = new FastList<>();
 					compArcs.put(state.component(), cArcs);
 				}
 				for(Transition out : state.outgoingTransitions())
@@ -407,7 +399,7 @@ public class Automaton {
         IntHashSet visited = new IntHashSet();
         IntIntHashMap possibleFuture;
         if(this.finalConfigurations == null)
-        	this.finalConfigurations = new UnifiedSet<IntIntHashMap>();
+        	this.finalConfigurations = new UnifiedSet<>();
         finalConfigurations.clear();
         this.states().values().forEach(state -> state.possibleFutures().clear());
         
@@ -556,7 +548,7 @@ public class Automaton {
 				config.put(element, trace.count(t -> t==element));
 			if((cases = this.configCasesMapping().get(config))==null)
 			{
-				cases = new FastList<IntArrayList>();
+				cases = new FastList<>();
 				this.configCasesMapping().put(config, cases);
 			}
 			cases.add(trace);
@@ -654,7 +646,7 @@ public class Automaton {
         				future.addToValue(label, 200);
 	}
 	
-	public void toDot(PrintWriter pw) throws IOException {
+	public void toDot(PrintWriter pw) {
 		pw.println("digraph fsm {");
 		pw.println("rankdir=LR;");
 		pw.println("node [shape=circle,style=filled, fillcolor=white]");

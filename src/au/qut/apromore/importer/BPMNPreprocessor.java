@@ -1,8 +1,8 @@
 package au.qut.apromore.importer;
 
+import org.apromore.processmining.models.graphbased.AbstractGraphEdge;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagramFactory;
-import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNEdge;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNNode;
 import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Event;
 import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Flow;
@@ -33,24 +33,30 @@ public class BPMNPreprocessor {
 
     private void replaceORSplit(Gateway node){
         int counter = 0;
-        var inEdges = diagram.getInEdges(node);
-        var outEdges = diagram.getOutEdges(node);
+        var inEdges = diagram.getInEdges(node).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
+        var outEdges = diagram.getOutEdges(node).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
 
-        List<BPMNNode> sources = inEdges.stream().map(edge -> edge.getSource()).collect(Collectors.toList());
-        List<BPMNNode> targets = outEdges.stream().map(edge -> edge.getTarget()).collect(Collectors.toList());
+        List<BPMNNode> sources = inEdges.stream().map(AbstractGraphEdge::getSource).collect(Collectors.toList());
+        List<BPMNNode> targets = outEdges.stream().map(AbstractGraphEdge::getTarget).collect(Collectors.toList());
+
+        var originalGateway = node.getAttributeMap().containsKey("belongsTo") ? node.getAttributeMap().get("belongsTo") :
+                node.getAttributeMap().get("Original id");
 
         var g0 = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
         g0.getAttributeMap().put("Original id", g0.getLabel());
+        g0.getAttributeMap().put("belongsTo", originalGateway);
         for(var source: sources)
             diagram.addFlow(source, g0, null);
 
         var g1 = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.PARALLEL);
         g1.getAttributeMap().put("Original id", g1.getLabel());
+        g1.getAttributeMap().put("belongsTo", originalGateway);
         diagram.addFlow(g0, g1, null);
 
         for(var target: targets){
             var g = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
             g.getAttributeMap().put("Original id", g.getLabel());
+            g.getAttributeMap().put("belongsTo", originalGateway);
             diagram.addFlow(g, target, null);
             diagram.addFlow(g1, g, null);
             diagram.addFlow(g0, g, null);
@@ -61,13 +67,14 @@ public class BPMNPreprocessor {
 
     private void decomposeORSplit(Gateway node){
         var currentGateway = node;
-        var outEdges = diagram.getOutEdges(currentGateway);
+        var outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
         int counter = 0;
 
         while(outEdges.size() > 2){
             var processEdges = new ArrayList<>(outEdges).subList(1, outEdges.size());
             Gateway gateway = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + counter, Gateway.GatewayType.INCLUSIVE);
             gateway.getAttributeMap().put("Original id", node.getAttributeMap().get("Original id") + "_" + counter);
+            gateway.getAttributeMap().put("belongsTo", node.getAttributeMap().get("Original id"));
             counter++;
             diagram.addFlow(currentGateway, gateway, null);
             for(var edge: processEdges){
@@ -75,14 +82,14 @@ public class BPMNPreprocessor {
                 diagram.addFlow(gateway, edge.getTarget(), null);
             }
             currentGateway = gateway;
-            outEdges = diagram.getOutEdges(currentGateway);
+            outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
         }
     }
 
     private List<Gateway> getOrSplits(){
         List<Gateway> orSplits = new ArrayList<>();
         for(var gateway: diagram.getGateways()){
-            var outEdges = diagram.getOutEdges(gateway);
+            var outEdges = diagram.getOutEdges(gateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
             if(gateway.getGatewayType() == Gateway.GatewayType.INCLUSIVE && outEdges.size() > 1)
                 orSplits.add(gateway);
         }
@@ -102,7 +109,7 @@ public class BPMNPreprocessor {
             globalScomps.add(BPMNDiagramFactory.cloneBPMNDiagram(scomp));
         else{
             var andSplit = nonTrivialAndSplits.get(0);
-            var outgoingFlows = scomp.getOutEdges(andSplit);
+            var outgoingFlows = scomp.getOutEdges(andSplit).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
             for(var outgoingFlow: outgoingFlows){
                 BPMNDiagram s = BPMNDiagramFactory.cloneBPMNDiagram(scomp);
                 var removeFlows = outgoingFlows.stream().filter(flow -> !flow.equals(outgoingFlow)).collect(Collectors.toList());
@@ -122,7 +129,7 @@ public class BPMNPreprocessor {
     public List<Gateway> getNonTrivialAndSplits(BPMNDiagram diagram){
         List<Gateway> nonTrivialAndSplits = new ArrayList<>();
         for(var gateway: diagram.getGateways()){
-            var outEdges = diagram.getOutEdges(gateway);
+            var outEdges = diagram.getOutEdges(gateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
             if(gateway.getGatewayType() == Gateway.GatewayType.PARALLEL && outEdges.size() > 1)
                 nonTrivialAndSplits.add(gateway);
         }
@@ -142,7 +149,7 @@ public class BPMNPreprocessor {
 
         while(queue.size() != 0) {
             var next = queue.poll();
-            var outgoingEdges = diagram.getOutEdges(next);
+            var outgoingEdges = diagram.getOutEdges(next).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
             for (var edge : outgoingEdges) {
                 var target = edge.getTarget();
                 if (!visited.contains(target)) {

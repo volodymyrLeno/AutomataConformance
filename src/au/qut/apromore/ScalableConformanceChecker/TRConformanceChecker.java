@@ -3,20 +3,15 @@ package au.qut.apromore.ScalableConformanceChecker;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.PriorityQueue;
-import java.util.Queue;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import au.qut.apromore.PetriNet.PetriNet;
 import au.qut.apromore.importer.DecodeTandemRepeats;
 import au.qut.apromore.psp.*;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.codehaus.jackson.map.DeserializerFactory;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
@@ -80,6 +75,7 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
         }
     }*/
 
+    private HashMap<String, String> idsMapping = new HashMap<>();
     private Automaton logAutomaton;
     private Automaton modelAutomaton;
     private Automaton originalModelAutomaton;
@@ -113,7 +109,8 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
 
         var ipm = new ImportProcessModel();
         modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
-        originalModelAutomaton = ipm.originalModel;
+        originalModelAutomaton = ipm.originalModelAutomaton;
+        idsMapping = ipm.idsMapping;
 
         System.out.println(modelAutomaton.eventLabels());
         psp = new PSP(logAutomaton, modelAutomaton);
@@ -2745,4 +2742,6 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
     public Automaton getOriginalModelAutomaton() { return originalModelAutomaton; }
 
     public Automaton getModelAutomaton() { return modelAutomaton; }
+
+    public HashMap<String, String> getIdsMapping() { return idsMapping; }
 }

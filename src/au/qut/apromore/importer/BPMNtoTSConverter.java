@@ -10,6 +10,7 @@ import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Gatew
 import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -35,16 +36,33 @@ public class BPMNtoTSConverter {
 
     HashMap<ImmutablePair<BPMNNode, BPMNNode>, HashMap<Integer, BitSet>> waitForFlows;
 
-    public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
-        //this.diagram = diagram;
-
+    public List<ReachabilityGraph> BPMNtoTSwithScomp(BPMNDiagram diagram){
+        List<ReachabilityGraph> reachabilityGraphs = new ArrayList<>();
         BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+
+        long start = System.nanoTime();
+
         this.diagram = bpmnPreprocessor.preprocessModel(diagram);
         labeledFlows = labelFlows(diagram.getFlows());
         invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
                 collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
 
-        //var scomps = bpmnPreprocessor.extractScomponents();
+        var scomps = bpmnPreprocessor.extractScomponents();
+        for(var scomp: scomps)
+            reachabilityGraphs.add(BPMNtoTS(scomp));
+
+        long end = System.nanoTime();
+        System.out.println("Model automaton creation: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
+
+        return reachabilityGraphs;
+    }
+
+    public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
+        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+        this.diagram = bpmnPreprocessor.preprocessModel(diagram);
+        labeledFlows = labelFlows(diagram.getFlows());
+        invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
+                collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
 
         structuralConflicts = getStructuralConflicts();
         rg = new ReachabilityGraph("");
@@ -369,7 +387,7 @@ public class BPMNtoTSConverter {
                 Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
 
                 if(event.getLabel() == null || event.getLabel().equals(""))
-                    label = "event " + event.getAttributeMap().get("Original id");
+                    label = "event " + event.getAttributeMap().get("Original id").toString();
                 else
                     label = event.getLabel();
 

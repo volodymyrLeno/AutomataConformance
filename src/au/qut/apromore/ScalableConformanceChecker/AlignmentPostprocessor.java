@@ -3,6 +3,7 @@ package au.qut.apromore.ScalableConformanceChecker;
 import au.qut.apromore.automaton.Automaton;
 import au.qut.apromore.automaton.State;
 import au.qut.apromore.automaton.Transition;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.replayer.replayresult.AllSyncReplayResult;
@@ -20,7 +21,7 @@ public class AlignmentPostprocessor {
     private static List<Integer> gatewayIDs;
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
-    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton){
+    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping){
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
         Map<IntArrayList, AllSyncReplayResult> notParsableAlignments = new HashMap<>();
 
@@ -29,7 +30,7 @@ public class AlignmentPostprocessor {
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
             try{
-                var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton);
+                var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton, idsMapping);
                 enhancedAlignments.put(entry.getKey(), enhancedAlignment);
             }
             catch(Exception e){
@@ -41,7 +42,7 @@ public class AlignmentPostprocessor {
     }
 
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton){
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton, HashMap<String, String> idsMapping){
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 
@@ -141,6 +142,16 @@ public class AlignmentPostprocessor {
                 nodeInstances.add(automaton.eventLabels().get(gateway));
                 stepTypes.add(StepTypes.MREAL);
             }
+        }
+
+        for(int i = 0; i < nodeInstances.size(); i++){
+            String currentLabel = nodeInstances.get(i).toString();
+            if(currentLabel.startsWith("gateway "))
+                nodeInstances.set(i, currentLabel.substring(("gateway ").length()));
+            else if(currentLabel.startsWith("event "))
+                nodeInstances.set(i, currentLabel.substring(("event ").length()));
+            else if(idsMapping.containsKey(currentLabel))
+                nodeInstances.set(i, idsMapping.get(currentLabel));
         }
 
         nodeInstanceLsts.add(nodeInstances);
