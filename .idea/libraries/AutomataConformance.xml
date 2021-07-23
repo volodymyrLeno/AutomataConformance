@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="AutomataConformance">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/out/artifacts/AutomataConformance_jar/AutomataConformance.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
