@@ -43,19 +43,19 @@ public class BPMNPreprocessor {
     var originalGateway = node.getAttributeMap().containsKey("belongsTo") ? node.getAttributeMap().get("belongsTo") :
         node.getAttributeMap().get("Original id");
 
-    var g0 = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
+    var g0 = diagram.addGateway(node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
     g0.getAttributeMap().put("Original id", g0.getLabel());
     g0.getAttributeMap().put("belongsTo", originalGateway);
     for(var source: sources)
       diagram.addFlow(source, g0, null);
 
-    var g1 = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.PARALLEL);
+    var g1 = diagram.addGateway(node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.PARALLEL);
     g1.getAttributeMap().put("Original id", g1.getLabel());
     g1.getAttributeMap().put("belongsTo", originalGateway);
     diagram.addFlow(g0, g1, null);
 
     for(var target: targets){
-      var g = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
+      var g = diagram.addGateway(node.getAttributeMap().get("Original id") + "_" + (counter++), Gateway.GatewayType.DATABASED);
       g.getAttributeMap().put("Original id", g.getLabel());
       g.getAttributeMap().put("belongsTo", originalGateway);
       diagram.addFlow(g, target, null);
@@ -67,25 +67,28 @@ public class BPMNPreprocessor {
   }
 
   private void decomposeORSplit(Gateway node){
-    var currentGateway = node;
-    var outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
-    int counter = 0;
+        var currentGateway = node;
+        var outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
+        int counter = 0;
 
-    while(outEdges.size() > 2){
-      var processEdges = new ArrayList<>(outEdges).subList(1, outEdges.size());
-      Gateway gateway = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + counter, Gateway.GatewayType.INCLUSIVE);
-      gateway.getAttributeMap().put("Original id", node.getAttributeMap().get("Original id") + "_" + counter);
-      gateway.getAttributeMap().put("belongsTo", node.getAttributeMap().get("Original id"));
-      counter++;
-      diagram.addFlow(currentGateway, gateway, null);
-      for(var edge: processEdges){
-        diagram.removeEdge(edge);
-        diagram.addFlow(gateway, edge.getTarget(), null);
-      }
-      currentGateway = gateway;
-      outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
+        String originalGateway = node.getAttributeMap().get("Original id").toString();
+
+        while(outEdges.size() > 2){
+            var processEdges = new ArrayList<>(outEdges).subList(1, outEdges.size());
+            Gateway gateway = diagram.addGateway(currentGateway.getAttributeMap().get("Original id") + "_" + counter, Gateway.GatewayType.INCLUSIVE);
+            gateway.getAttributeMap().put("Original id", currentGateway.getAttributeMap().get("Original id") + "_" + counter);
+            gateway.getAttributeMap().put("belongsTo", originalGateway);
+
+            counter++;
+            diagram.addFlow(currentGateway, gateway, null);
+            for(var edge: processEdges){
+                diagram.removeEdge(edge);
+                diagram.addFlow(gateway, edge.getTarget(), null);
+            }
+            currentGateway = gateway;
+            outEdges = diagram.getOutEdges(currentGateway).stream().filter(e -> e instanceof Flow).collect(Collectors.toList());
+        }
     }
-  }
 
   private List<Gateway> getOrSplits(){
     List<Gateway> orSplits = new ArrayList<>();
