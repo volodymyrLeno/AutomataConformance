@@ -120,20 +120,24 @@ public class DecomposingTRImporter extends ImportProcessModel
         Object[] pnetAndMarking;
         this.path = path;
         this.model = model;
-        if(model.endsWith(".bpmn"))
-            pnetAndMarking = this.importPetrinetFromBPMN(path + model);
-        else
-            pnetAndMarking = importPetriNetAndMarking(path + model);
-        pnet = (Petrinet) pnetAndMarking[0];
-        this.modelFSM = createFSMfromPetrinet(pnet, (Marking) pnetAndMarking[1], null, null);
+        String fileName = path + model;
+        if(model.endsWith(".bpmn")){
+            BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
+            this.modelFSM = createFSMfromBPMN(diagram, null, null);
+        }
+        else{
+            pnetAndMarking = importPetriNetAndMarking(fileName);
+            pnet = (Petrinet) pnetAndMarking[0];
+            this.modelFSM = createFSMfromPetrinet(pnet, (Marking) pnetAndMarking[1], null, null);
+        }
     }
 
     /* ############ MY CODE STARTS ############ */
 
     public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
         this.xLog = xLog;
-        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
-        parallel = bpmnPreprocessor.getNonTrivialAndSplits(diagram).size();
+        this.modelFSM = createFSMfromBPMN(diagram, null, null);
+        parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
         doDecomposition = parallel > 0;
         if(doDecomposition){
             decomposeBpmnDiagramIntoSComponentAutomata(diagram);

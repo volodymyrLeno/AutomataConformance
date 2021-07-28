@@ -4,8 +4,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import au.qut.apromore.ScalableConformanceChecker.*;
 import au.qut.apromore.automaton.State;
@@ -51,12 +53,14 @@ import org.processmining.plugins.replayer.replayresult.AllSyncReplayResult;
 
 import javax.swing.plaf.synth.SynthEditorPaneUI;
 
+import static org.apache.poi.hslf.record.RecordTypes.List;
+
 
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		String model = "models/simple.bpmn";
-		String log = "logs/simple.xes";
+		String model = "models/BPML_controlflow.bpmn";
+		String log = "logs/dataset.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		/*String model = "AntiAlignmentsDatasets/1.pnml";
@@ -64,23 +68,24 @@ public class Main {
 		String path = "C:/Volodymyr/TEST/";*/
 
 		long start = System.nanoTime();
-		TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
+		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
 		ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
 
-		//DecomposingTRImporter importer = new DecomposingTRImporter();
-		//importer.importAndDecomposeModelAndLogForConformanceChecking(path, model, log);
-		//DecomposingTRConformanceChecker confChecker = new DecomposingTRConformanceChecker(importer);
+		/*DecomposingTRImporter importer = new DecomposingTRImporter();
+		importer.importAndDecomposeModelAndLogForConformanceChecking(path, model, log);
+		DecomposingTRConformanceChecker confChecker = new DecomposingTRConformanceChecker(importer);*/
 
-		//long end = System.nanoTime();
-		//System.out.println("Conformance checking: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
+		long end = System.nanoTime();
+		System.out.println("Conformance checking: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
 		start = System.nanoTime();
-		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton());
-		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton(), tr.getIdsMapping());
-		//end = System.nanoTime();
-		//System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
+		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton(), confChecker.getIdsMapping());
+		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton(), tr.getIdsMapping());
+		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.alignmentResult.stream().collect(Collectors.toList()), confChecker.decompositions.originalModelAutomaton, confChecker.decompositions.idsMapping);
+		end = System.nanoTime();
+		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
-		//var alignments = confChecker.traceAlignmentsMapping;
+		var alignments = confChecker.traceAlignmentsMapping;
 
 		System.out.println();
 

@@ -87,7 +87,7 @@ public class Automaton {
 	}
 
 	public Automaton(Map<Integer, State> states, BiMap<Integer, String> labelMapping, BiMap<String, Integer> inverseLabelMapping, Map<Integer, Transition> transitions,
-			int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs) {
+			int initialState, IntHashSet FinalStates, UnifiedMap<IntArrayList, IntArrayList> caseTracesMapping, Map<Integer, String> caseIDs) throws IOException {
 		this.states = states;
 		this.eventLabels = labelMapping;
 		this.inverseEventLabels = inverseLabelMapping;

@@ -27,10 +27,7 @@ import test.Alignments.AlignmentTest;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 
 public class DecomposingTRConformanceChecker
 {

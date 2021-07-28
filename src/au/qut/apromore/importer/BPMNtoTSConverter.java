@@ -58,8 +58,7 @@ public class BPMNtoTSConverter {
     }
 
     public ReachabilityGraph BPMNtoTS(BPMNDiagram diagram){
-        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
-        this.diagram = bpmnPreprocessor.preprocessModel(diagram);
+        this.diagram = diagram;
         labeledFlows = labelFlows(diagram.getFlows());
         invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
                 collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
@@ -144,7 +143,7 @@ public class BPMNtoTSConverter {
 
                 bitMask.add(mask);
             }
-            else if(isXORGateway(node)){
+            else{
                 for(var flow: inEdges){
                     BitSet mask = new BitSet(labeledFlows.size());
                     mask.set(invertedLabeledFlows.get(flow));
@@ -375,22 +374,12 @@ public class BPMNtoTSConverter {
 
             if(isGateway(node)){
                 Gateway gateway = (Gateway) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-
-                if(gateway.getLabel() == null || gateway.getLabel().equals(""))
-                    label = "gateway " + gateway.getAttributeMap().get("Original id");
-                else
-                    label = gateway.getLabel();
-
+                label = "gateway " + gateway.getAttributeMap().get("Original id");
                 rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
             else if(isEvent(node)){
                 Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-
-                if(event.getLabel() == null || event.getLabel().equals(""))
-                    label = "event " + event.getAttributeMap().get("Original id").toString();
-                else
-                    label = event.getLabel();
-
+                label = event.getLabel();
                 rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
         }

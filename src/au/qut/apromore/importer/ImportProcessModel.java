@@ -511,6 +511,14 @@ public class ImportProcessModel
 		return modelAutomaton;
 	}
 
+	public au.qut.apromore.automaton.Automaton createFSMfromBPMN(BPMNDiagram diagram, BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping){
+		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
+		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(diagram);
+		idsMapping = getIdsMapping(diagram);
+		modelAutomaton = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
+		return modelAutomaton;
+	}
+
 	public Automaton convertReachabilityGraphToFSM(ReachabilityGraph rg, BiMap<Integer, String> eventLabels, BiMap<String, Integer> inverseEventLabelMapping) {
 		LinkedHashMap<Integer, au.qut.apromore.automaton.State> originalStateMapping = new LinkedHashMap<>();
 		LinkedHashMap<Integer, au.qut.apromore.automaton.Transition> originalTransitionMapping = new LinkedHashMap<>();

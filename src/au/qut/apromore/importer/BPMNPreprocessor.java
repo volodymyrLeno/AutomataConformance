@@ -15,9 +15,11 @@ public class BPMNPreprocessor {
 
     BPMNDiagram diagram;
     List<Gateway> orSplits;
+    HashMap<String, List<String>> artificialGatewaysInfo;
 
     public BPMNDiagram preprocessModel(BPMNDiagram diagram){
         this.diagram = diagram;
+        artificialGatewaysInfo = new HashMap<>();
         orSplits = getOrSplits();
         for(var orSplit: orSplits)
             decomposeORSplit(orSplit);
@@ -74,7 +76,8 @@ public class BPMNPreprocessor {
             var processEdges = new ArrayList<>(outEdges).subList(1, outEdges.size());
             Gateway gateway = diagram.addGateway("gateway " + node.getAttributeMap().get("Original id") + "_" + counter, Gateway.GatewayType.INCLUSIVE);
             gateway.getAttributeMap().put("Original id", node.getAttributeMap().get("Original id") + "_" + counter);
-            gateway.getAttributeMap().put("belongsTo", node.getAttributeMap().get("Original id"));
+
+            //gateway.getAttributeMap().put("belongsTo", node.getAttributeMap().get("Original id"));
             counter++;
             diagram.addFlow(currentGateway, gateway, null);
             for(var edge: processEdges){
