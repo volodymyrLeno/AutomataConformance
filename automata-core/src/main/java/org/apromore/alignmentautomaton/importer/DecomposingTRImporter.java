@@ -1,15 +1,7 @@
 package org.apromore.alignmentautomaton.importer;
 
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.io.*;
+import java.util.*;
 import cern.colt.list.DoubleArrayList;
 import cern.colt.matrix.DoubleMatrix2D;
 import com.google.common.collect.BiMap;
@@ -18,6 +10,8 @@ import name.kazennikov.dafsa.AbstractIntDAFSA;
 import name.kazennikov.dafsa.IntDAFSAInt;
 import org.apromore.alignmentautomaton.automaton.Automaton;
 import org.apromore.alignmentautomaton.automaton.State;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.deckfour.xes.model.XAttributeLiteral;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
@@ -46,6 +40,7 @@ import org.processmining.plugins.bpmn.Bpmn;
 import org.processmining.plugins.petrinet.structuralanalysis.IncidenceMatrixFactory;
 import org.processmining.plugins.petrinet.structuralanalysis.invariants.PlaceInvariantCalculator;
 import org.processmining.plugins.petrinet.structuralanalysis.util.SelfLoopTransitionExtract;
+import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 
 public class DecomposingTRImporter extends ImportProcessModel {
 
@@ -138,29 +133,75 @@ public class DecomposingTRImporter extends ImportProcessModel {
     Object[] pnetAndMarking;
     this.path = path;
     this.model = model;
-    if (model.endsWith(".bpmn")) {
-      pnetAndMarking = this.importPetrinetFromBPMN(path + model);
-    } else {
-      pnetAndMarking = importPetriNetAndMarking(path + model);
-    }
-    xLog = new ImportEventLog().importEventLog(path + log);
-    pnet = (Petrinet) pnetAndMarking[0];
-    this.importAndDecomposeModelAndLogForConformanceChecking((Petrinet) pnetAndMarking[0], (Marking) pnetAndMarking[1],
-        xLog);
 
+    xLog = new ImportEventLog().importEventLog(path + log);
+    String fileName = path + model;
+
+    if(model.endsWith(".bpmn")){
+      BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
+      this.importAndDecomposeModelAndLogForConformanceChecking(diagram, xLog);
+    }
+    else{
+      pnetAndMarking = importPetriNetAndMarking(fileName);
+      pnet = (Petrinet) pnetAndMarking[0];
+      this.importAndDecomposeModelAndLogForConformanceChecking((Petrinet) pnetAndMarking[0], (Marking) pnetAndMarking[1], xLog);
+    }
   }
 
   public void importModelForStatistics(String path, String model) throws Exception {
     Object[] pnetAndMarking;
     this.path = path;
     this.model = model;
-    if (model.endsWith(".bpmn")) {
-      pnetAndMarking = this.importPetrinetFromBPMN(path + model);
-    } else {
-      pnetAndMarking = importPetriNetAndMarking(path + model);
+    String fileName = path + model;
+    if(model.endsWith(".bpmn")){
+      BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
+      this.modelFSM = createFSMfromBPMN(diagram, null, null);
     }
-    pnet = (Petrinet) pnetAndMarking[0];
-    this.modelFSM = createFSMfromPetrinet(pnet, (Marking) pnetAndMarking[1], null, null);
+    else{
+      pnetAndMarking = importPetriNetAndMarking(fileName);
+      pnet = (Petrinet) pnetAndMarking[0];
+      this.modelFSM = createFSMfromPetrinet(pnet, (Marking) pnetAndMarking[1], null, null);
+    }
+  }
+
+  public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
+    this.xLog = xLog;
+    this.modelFSM = createFSMfromBPMN(diagram, null, null);
+    parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
+    doDecomposition = parallel > 0;
+    if(doDecomposition){
+      decomposeBpmnDiagramIntoSComponentAutomata(diagram);
+      decomposeLogIntoProjectedDafsa(xLog);
+      decideSCompRule();
+    }
+    else{
+      importer = new ImportEventLog();
+      dafsa = importer.createReducedDAFSAfromLog(xLog, globalInverseLabels);
+      avgReduction = importer.getReductionLength();
+    }
+    decideTRrule();
+  }
+
+  public void decomposeBpmnDiagramIntoSComponentAutomata(BPMNDiagram diagram){
+    BPMNtoTSConverter bpmNtoTSConverter = new BPMNtoTSConverter();
+    List<ReachabilityGraph> reachabilityGraphs = bpmNtoTSConverter.BPMNtoTSwithScomp(diagram);
+    for(var rg: reachabilityGraphs){
+      ImportProcessModel importer = new ImportProcessModel();
+      Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
+      this.sComponentImporters.add(importer);
+      sComponentFSMs.add(fsm);
+
+      IntArrayList components;
+      for(Integer event : fsm.eventLabels().keySet())
+      {
+        if((components = labelComponentsMapping.get(event))==null)
+        {
+          components = new IntArrayList();
+          labelComponentsMapping.put(event, components);
+        }
+        components.add(sComponentFSMs.size()-1);
+      }
+    }
   }
 
   public void importAndDecomposeModelAndLogForConformanceChecking(Petrinet pnet, Marking initM, XLog xLog)

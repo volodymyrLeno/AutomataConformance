@@ -139,7 +139,7 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
   public ScalableConformanceChecker(BPMNDiagram diagram, XLog xLog){
     this.logAutomaton = new ImportEventLog().createDAFSAfromLog(xLog);;
     var ipm = new ImportProcessModel();
-    this.modelAutomaton = ipm.createFSMFromBPNM(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+    this.modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
     this.originalModelAutomaton = ipm.originalModelAutomaton;
     this.idsMapping = ipm.idsMapping;
     this.psp = new PSP(logAutomaton, modelAutomaton);

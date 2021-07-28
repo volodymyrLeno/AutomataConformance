@@ -570,10 +570,10 @@ public class ImportProcessModel {
   public Automaton createFSMfromBPMNFile(String fileName, BiMap<Integer, String> eventLabelMapping,
       BiMap<String, Integer> inverseEventLabelMapping) throws Exception {
     org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram diagram = new org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
-    return createFSMFromBPNM(diagram, eventLabelMapping, inverseEventLabelMapping);
+    return createFSMfromBPMN(diagram, eventLabelMapping, inverseEventLabelMapping);
   }
 
-  public Automaton createFSMFromBPNM(org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram diagram,
+  public Automaton createFSMfromBPMN(org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram diagram,
       BiMap<Integer, String> eventLabelMapping, BiMap<String, Integer> inverseEventLabelMapping) {
     BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
     ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(diagram);

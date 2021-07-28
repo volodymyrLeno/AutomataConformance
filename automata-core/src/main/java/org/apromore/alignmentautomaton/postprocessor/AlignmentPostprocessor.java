@@ -47,6 +47,25 @@ public class AlignmentPostprocessor {
     return enhancedAlignments;
   }
 
+  public static List<AllSyncReplayResult> computeEnhancedAlignments(List<AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping){
+    List<AllSyncReplayResult> enhancedAlignments = new ArrayList<>();
+    List<AllSyncReplayResult> notParsableAlignments = new ArrayList<>();
+
+    getGatewayIds(originalAutomaton);
+    gatewaysInfo = computeGatewaysInfo(originalAutomaton);
+
+    for(var alignment : alignments){
+      try{
+        var enhancedAlignment = getEnhancedAlignment(alignment, originalAutomaton, idsMapping);
+        enhancedAlignments.add(enhancedAlignment);
+      }
+      catch(Exception e){
+        notParsableAlignments.add(alignment);
+      }
+    }
+
+    return enhancedAlignments;
+  }
 
   private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton, HashMap<String, String> idsMapping){
     List<List<Object>> nodeInstanceLsts = new ArrayList<>();
