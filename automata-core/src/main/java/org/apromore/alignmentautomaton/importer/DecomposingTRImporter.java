@@ -1,11 +1,22 @@
 package org.apromore.alignmentautomaton.importer;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import cern.colt.list.DoubleArrayList;
 import cern.colt.matrix.DoubleMatrix2D;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import lombok.NonNull;
 import name.kazennikov.dafsa.AbstractIntDAFSA;
 import name.kazennikov.dafsa.IntDAFSAInt;
 import org.apromore.alignmentautomaton.automaton.Automaton;
@@ -35,12 +46,12 @@ import org.processmining.models.graphbased.directed.petrinet.analysis.SComponent
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.PetrinetImpl;
+import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.bpmn.Bpmn;
 import org.processmining.plugins.petrinet.structuralanalysis.IncidenceMatrixFactory;
 import org.processmining.plugins.petrinet.structuralanalysis.invariants.PlaceInvariantCalculator;
 import org.processmining.plugins.petrinet.structuralanalysis.util.SelfLoopTransitionExtract;
-import org.processmining.models.graphbased.directed.transitionsystem.ReachabilityGraph;
 
 public class DecomposingTRImporter extends ImportProcessModel {
 
@@ -164,19 +175,19 @@ public class DecomposingTRImporter extends ImportProcessModel {
     }
   }
 
-  public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
+  public void importAndDecomposeModelAndLogForConformanceChecking(@NonNull BPMNDiagram diagram, @NonNull XLog xLog) throws Exception{
     this.xLog = xLog;
     this.modelFSM = createFSMfromBPMN(diagram, null, null);
     parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
     doDecomposition = parallel > 0;
     if(doDecomposition){
       decomposeBpmnDiagramIntoSComponentAutomata(diagram);
-      decomposeLogIntoProjectedDafsa(xLog);
+      decomposeLogIntoProjectedDafsa(this.xLog);
       decideSCompRule();
     }
     else{
       importer = new ImportEventLog();
-      dafsa = importer.createReducedDAFSAfromLog(xLog, globalInverseLabels);
+      dafsa = importer.createReducedDAFSAfromLog(this.xLog, globalInverseLabels);
       avgReduction = importer.getReductionLength();
     }
     decideTRrule();

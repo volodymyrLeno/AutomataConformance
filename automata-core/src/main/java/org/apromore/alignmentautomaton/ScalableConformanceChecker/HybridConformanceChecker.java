@@ -65,7 +65,7 @@ public class HybridConformanceChecker {
       this.alignmentResult = checker.alignmentResult;
     } else {
       System.out.println("Applying Automata Conformance");
-//      decompositions.prepareAutomata();
+      decompositions.prepareAutomata();
       MultiThreadedConformanceChecker checker = new MultiThreadedConformanceChecker(decompositions.dafsa,
           decompositions.modelFSM, Integer.MAX_VALUE, numThreads);
       this.traceAlignmentsMapping = checker.traceAlignmentsMapping;
@@ -99,9 +99,9 @@ public class HybridConformanceChecker {
       this.alignmentResult = SComp.alignmentResult;
     } else {
       log.info("Applying Automata Conformance");
-//      decompositions.prepareAutomata();
-      ScalableConformanceChecker checker = new ScalableConformanceChecker(decompositions.dafsa,
-          decompositions.modelFSM, Integer.MAX_VALUE);
+      decompositions.prepareAutomata();
+      ScalableConformanceChecker checker = new ScalableConformanceChecker(decompositions.dafsa, decompositions.modelFSM,
+          Integer.MAX_VALUE);
       this.traceAlignmentsMapping = checker.traceAlignmentsMapping;
       this.alignmentResult = checker.resOneOptimal();
     }

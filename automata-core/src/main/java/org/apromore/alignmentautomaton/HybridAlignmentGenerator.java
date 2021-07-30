@@ -2,8 +2,8 @@ package org.apromore.alignmentautomaton;
 
 import java.io.IOException;
 import java.util.Map;
+import lombok.NonNull;
 import org.apromore.alignmentautomaton.ScalableConformanceChecker.HybridConformanceChecker;
-import org.apromore.alignmentautomaton.ScalableConformanceChecker.ScalableConformanceChecker;
 import org.apromore.alignmentautomaton.importer.DecomposingTRImporter;
 import org.apromore.alignmentautomaton.postprocessor.AlignmentPostprocessor;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
@@ -31,18 +31,15 @@ public class HybridAlignmentGenerator implements AlignmentGenerator {
   }
 
   @Override
-  public AlignmentResult computeAlignment(BPMNDiagram bpmn, XLog xLog) {
+  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog) {
     try {
-      // FIXME hybrid conformance checker is temporarily
-      //      DecomposingTRImporter importer = new DecomposingTRImporter();
-      //      importer.importAndDecomposeModelAndLogForConformanceChecking(bpmn, xLog);
-      //      HybridConformanceChecker checker = new HybridConformanceChecker(importer, NUM_THREADS);
-      ScalableConformanceChecker checker = new ScalableConformanceChecker(bpmn, xLog);
-      checker.call();
+      DecomposingTRImporter importer = new DecomposingTRImporter();
+      importer.importAndDecomposeModelAndLogForConformanceChecking(bpmn, xLog);
+      HybridConformanceChecker checker = new HybridConformanceChecker(importer, NUM_THREADS);
 
       Map<IntArrayList, AllSyncReplayResult> res = AlignmentPostprocessor
-          .computeEnhancedAlignments(checker.traceAlignmentsMapping, checker.getOriginalModelAutomaton(),
-              checker.getIdsMapping());
+          .computeEnhancedAlignments(checker.traceAlignmentsMapping, importer.originalModelAutomaton,
+              importer.idsMapping);
       return new AlignmentResult(new PNMatchInstancesRepResult(res.values()));
     } catch (Exception ex) {
       throw new AlignmentGenerationException("Internal error generating alignment, cause: " + ex.getMessage(), ex);

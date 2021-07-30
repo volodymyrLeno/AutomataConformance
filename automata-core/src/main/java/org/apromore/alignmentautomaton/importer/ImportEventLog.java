@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import lombok.NonNull;
 import name.kazennikov.dafsa.AbstractIntDAFSA;
 import name.kazennikov.dafsa.IntDAFSAInt;
 import org.apromore.alignmentautomaton.automaton.Automaton;
@@ -244,12 +245,12 @@ public class ImportEventLog {
     return this.createReducedDAFSAfromLog(xlog);
   }
 
-  public Automaton createReducedDAFSAfromLog(XLog xLog, BiMap<String, Integer> inverseLabelMapping) {
+  public Automaton createReducedDAFSAfromLog(@NonNull XLog xLog, BiMap<String, Integer> inverseLabelMapping) {
     this.inverseLabelMapping = HashBiMap.create(inverseLabelMapping);
     return createReducedDAFSAfromLog(xLog);
   }
 
-  public Automaton createReducedDAFSAfromLog(XLog xLog) {
+  public Automaton createReducedDAFSAfromLog(@NonNull XLog xLog) {
     this.xlog = xLog;
     caseTracesMapping = new UnifiedMap<>();
     caseIDs = new UnifiedMap<>();
