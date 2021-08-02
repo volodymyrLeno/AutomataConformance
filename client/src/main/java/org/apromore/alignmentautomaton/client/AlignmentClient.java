@@ -2,21 +2,18 @@ package org.apromore.alignmentautomaton.client;
 
 import java.net.URI;
 import java.util.UUID;
-import org.apromore.alignmentautomaton.AlignmentGenerator;
 import org.apromore.alignmentautomaton.AlignmentResult;
 import org.apromore.alignmentautomaton.api.FileStoreResponse;
 import org.apromore.alignmentautomaton.api.RESTEndpointsConfig;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.deckfour.xes.model.XLog;
-import org.processmining.models.graphbased.directed.petrinet.Petrinet;
-import org.processmining.models.semantics.petrinet.Marking;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Component
-public class AlignmentClient implements AlignmentGenerator {
+public class AlignmentClient {
 
   private final RestTemplate restTemplate;
 
@@ -28,12 +25,6 @@ public class AlignmentClient implements AlignmentGenerator {
     this.apiURI = apiURI;
   }
 
-  @Override
-  public AlignmentResult computeAlignment(Petrinet petriNet, Marking marking, XLog xLog) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public AlignmentResult computeAlignment(BPMNDiagram bpmn, XLog xLog) {
 
     String modelName = UUID.randomUUID().toString();

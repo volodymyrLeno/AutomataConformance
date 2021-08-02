@@ -20,6 +20,8 @@ configurations {
 
 dependencies {
 
+    api project(':alignment-common')
+
     api group: 'org.apache.commons', name: 'commons-lang3'
     api group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
 
