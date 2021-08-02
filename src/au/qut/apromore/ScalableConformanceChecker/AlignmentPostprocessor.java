@@ -21,7 +21,7 @@ public class AlignmentPostprocessor {
     private static List<Integer> gatewayIDs;
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
-    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping){
+    public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping, HashMap<String, List<String>> artificialGatewaysInfo){
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
         Map<IntArrayList, AllSyncReplayResult> notParsableAlignments = new HashMap<>();
 
@@ -30,7 +30,7 @@ public class AlignmentPostprocessor {
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
             try{
-                var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton, idsMapping);
+                var enhancedAlignment = getEnhancedAlignment(entry.getValue(), originalAutomaton, idsMapping, artificialGatewaysInfo);
                 enhancedAlignments.put(entry.getKey(), enhancedAlignment);
             }
             catch(Exception e){
@@ -41,7 +41,7 @@ public class AlignmentPostprocessor {
         return enhancedAlignments;
     }
 
-    public static List<AllSyncReplayResult> computeEnhancedAlignments(List<AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping){
+    public static List<AllSyncReplayResult> computeEnhancedAlignments(List<AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping, HashMap<String, List<String>> artificialGatewaysInfo){
         List<AllSyncReplayResult> enhancedAlignments = new ArrayList<>();
         List<AllSyncReplayResult> notParsableAlignments = new ArrayList<>();
 
@@ -50,7 +50,7 @@ public class AlignmentPostprocessor {
 
         for(var alignment : alignments){
             try{
-                var enhancedAlignment = getEnhancedAlignment(alignment, originalAutomaton, idsMapping);
+                var enhancedAlignment = getEnhancedAlignment(alignment, originalAutomaton, idsMapping, artificialGatewaysInfo);
                 enhancedAlignments.add(enhancedAlignment);
             }
             catch(Exception e){
@@ -61,7 +61,7 @@ public class AlignmentPostprocessor {
         return enhancedAlignments;
     }
 
-    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton, HashMap<String, String> idsMapping){
+    private static AllSyncReplayResult getEnhancedAlignment(AllSyncReplayResult alignment, Automaton automaton, HashMap<String, String> idsMapping, HashMap<String, List<String>> artificialGatewaysInfo){
         List<List<Object>> nodeInstanceLsts = new ArrayList<>();
         List<List<StepTypes>> stepTypesLsts = new ArrayList<>();
 
@@ -167,11 +167,12 @@ public class AlignmentPostprocessor {
             String currentLabel = nodeInstances.get(i).toString();
             if(currentLabel.startsWith("gateway "))
                 nodeInstances.set(i, currentLabel.substring(("gateway ").length()));
-            else if(currentLabel.startsWith("event "))
-                nodeInstances.set(i, currentLabel.substring(("event ").length()));
             else if(idsMapping.containsKey(currentLabel))
                 nodeInstances.set(i, idsMapping.get(currentLabel));
         }
+
+        if(artificialGatewaysInfo != null)
+            removeArtificialGateways(nodeInstances, stepTypes, artificialGatewaysInfo);
 
         nodeInstanceLsts.add(nodeInstances);
         stepTypesLsts.add(stepTypes);
@@ -193,7 +194,6 @@ public class AlignmentPostprocessor {
 
         return null;
     }
-
 
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> computeGatewaysInfo(Automaton automaton){
         LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> info = new LinkedHashMap<>();
@@ -255,5 +255,49 @@ public class AlignmentPostprocessor {
             if(label.startsWith("gateway"))
                 gatewayIDs.add(idx);
         }
+    }
+
+    private static void removeArtificialGateways(List<Object> nodeInstanceLst, List<StepTypes> stepTypesLst, HashMap<String, List<String>> artificialGatewaysInfo){
+        List<Object> nodeInstances = new ArrayList<>();
+        List<StepTypes> stepTypes = new ArrayList<>();
+        String entryPoint = null;
+
+        HashMap<String, String> artificialGatewaysHelper = new HashMap<>();
+        for(Map.Entry<String, List<String>> entry: artificialGatewaysInfo.entrySet()){
+            for(var value: entry.getValue())
+                artificialGatewaysHelper.put(value, entry.getKey());
+        }
+
+        for(int i = 0; i < nodeInstanceLst.size(); i++){
+            String nodeInstance = nodeInstanceLst.get(i).toString();
+            if(!artificialGatewaysHelper.containsKey(nodeInstance)){
+                nodeInstances.add(nodeInstanceLst.get(i));
+                stepTypes.add(stepTypesLst.get(i));
+            }
+            else{
+                if(entryPoint == null){
+                    nodeInstances.add(artificialGatewaysHelper.get(nodeInstance));
+                    stepTypes.add(stepTypesLst.get(i));
+                    entryPoint = nodeInstance;
+                }
+                else{
+                    var tempList = artificialGatewaysInfo.get(artificialGatewaysHelper.get(nodeInstance));
+                    if(!tempList.contains(entryPoint)){
+                        nodeInstances.add(artificialGatewaysHelper.get(nodeInstance));
+                        stepTypes.add(stepTypesLst.get(i));
+                        entryPoint = nodeInstance;
+                    }
+                    else if(entryPoint.equals(nodeInstance)){
+                        nodeInstances.add(artificialGatewaysHelper.get(nodeInstance));
+                        stepTypes.add(stepTypesLst.get(i));
+                    }
+                }
+            }
+        }
+        nodeInstanceLst.clear();
+        stepTypesLst.clear();
+
+        nodeInstanceLst.addAll(nodeInstances);
+        stepTypesLst.addAll(stepTypes);
     }
 }

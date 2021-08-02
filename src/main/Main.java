@@ -59,13 +59,17 @@ import static org.apache.poi.hslf.record.RecordTypes.List;
 public class Main {
 	public static void main(String[] args) throws Exception
 	{
-		String model = "models/BPML_controlflow.bpmn";
+		/*String model = "models/BPML_controlflow.bpmn";
 		String log = "logs/dataset.xes";
-		String path = "C:/Volodymyr/TEST/";
+		String path = "C:/Volodymyr/TEST/";*/
 
 		/*String model = "AntiAlignmentsDatasets/1.pnml";
 		String log = "logs/simple.xes";
 		String path = "C:/Volodymyr/TEST/";*/
+
+		String model = "models/orJoinTest.bpmn";
+		String log = "logs/test5.xes";
+		String path = "C:/Volodymyr/TEST/";
 
 		long start = System.nanoTime();
 		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
@@ -79,9 +83,9 @@ public class Main {
 		System.out.println("Conformance checking: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
 		start = System.nanoTime();
-		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton(), confChecker.getIdsMapping());
-		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton(), tr.getIdsMapping());
-		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.alignmentResult.stream().collect(Collectors.toList()), confChecker.decompositions.originalModelAutomaton, confChecker.decompositions.idsMapping);
+		var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.traceAlignmentsMapping, confChecker.getOriginalModelAutomaton(), confChecker.getIdsMapping(), confChecker.getArtificialGatewaysInfo());
+		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(tr.traceAlignmentsMapping, tr.getOriginalModelAutomaton(), tr.getIdsMapping(), tr.getArtificialGatewaysInfo());
+		//var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.alignmentResult.stream().collect(Collectors.toList()), confChecker.decompositions.originalModelAutomaton, confChecker.decompositions.idsMapping, confChecker.decompositions.artificialGatewaysInfo);
 		end = System.nanoTime();
 		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 

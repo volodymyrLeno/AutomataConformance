@@ -44,14 +44,12 @@ public class DecomposingTRConformanceChecker
     public DecomposingTRConformanceChecker(DecomposingTRImporter decompositions) throws Exception
     {
         this.decompositions = decompositions;
-        //long start = System.nanoTime();
         if(decompositions.doDecomposition) {
             this.checkConformanceForComponents();
             this.recomposeConformance();
         }
         else
         {
-            //System.out.println(decompositions.globalInverseLabels);
             componentAlignments.put(0,new TRConformanceChecker(decompositions.dafsa, decompositions.modelFSM, Integer.MAX_VALUE));
             alignmentResult = componentAlignments.get(0).resOneOptimal();
             logSize = decompositions.xLog.size();
@@ -408,16 +406,20 @@ public class DecomposingTRConformanceChecker
                     break;
                 }
                 if(res.getStepTypesLst().get(0).get(pos) == StepTypes.L) continue;
-                int curEventID = decompositions.modelFSM.inverseEventLabels().get(res.getNodeInstanceLst().get(0).get(pos));
-                next = new IntHashSet();
-                for(int curNode : toBeVisited.toArray())
-                {
-                    for(Transition tr : decompositions.modelFSM.states().get(curNode).outgoingTransitions())
+
+                //if(!decompositions.modelFSM.inverseEventLabels().containsKey(res.getNodeInstanceLst().get(0).get(pos))) continue;
+                //else{
+                    int curEventID = decompositions.modelFSM.inverseEventLabels().get(res.getNodeInstanceLst().get(0).get(pos));
+                    next = new IntHashSet();
+                    for(int curNode : toBeVisited.toArray())
                     {
-                        if(tr.eventID()==curEventID) next.add(tr.target().id());
+                        for(Transition tr : decompositions.modelFSM.states().get(curNode).outgoingTransitions())
+                        {
+                            if(tr.eventID()==curEventID) next.add(tr.target().id());
+                        }
                     }
-                }
-                toBeVisited = next;
+                    toBeVisited = next;
+                //}
             }
             if(conflictOccurred) continue;
             boolean isCoherent = false;

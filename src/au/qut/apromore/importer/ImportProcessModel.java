@@ -77,6 +77,7 @@ public class ImportProcessModel
 	public au.qut.apromore.automaton.Automaton modelAutomaton;
 	public au.qut.apromore.automaton.Automaton originalModelAutomaton;
 	public HashMap<String, String> idsMapping = new HashMap<>();
+	public HashMap artificialGatewaysInfo = new HashMap<>();
 	public BiMap<Integer, String> globalLabelMapping = HashBiMap.create();
 	public BiMap<String, Integer> globalInverseLabels = HashBiMap.create();
 	protected BiMap<Integer, String> eventLabelMapping;
@@ -507,6 +508,7 @@ public class ImportProcessModel
 		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
 		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(bpmnDiagram);
 		idsMapping = getIdsMapping(bpmnDiagram);
+		artificialGatewaysInfo = bpmnToFSMConverter.artificialGatewaysInfo;
 		modelAutomaton = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
 		return modelAutomaton;
 	}
@@ -515,6 +517,7 @@ public class ImportProcessModel
 		BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
 		ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(diagram);
 		idsMapping = getIdsMapping(diagram);
+		artificialGatewaysInfo = bpmnToFSMConverter.artificialGatewaysInfo;
 		modelAutomaton = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
 		return modelAutomaton;
 	}
@@ -594,7 +597,7 @@ public class ImportProcessModel
 
 				if((rkey = this.globalInverseLabels.get(tLabel)) == null)
 				{
-					if(tLabel.startsWith("gateway") && !tauIdxs.contains(iEvent))
+					if(tLabel.startsWith("gateway ") && !tauIdxs.contains(iEvent))
 						tauIdxs.add(iEvent);
 
 					rkey = iEvent;

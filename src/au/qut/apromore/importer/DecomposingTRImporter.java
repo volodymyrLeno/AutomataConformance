@@ -10,6 +10,9 @@ import com.raffaeleconforti.java.raffaeleconforti.efficientlog.XAttributeMapLazy
 import name.kazennikov.dafsa.AbstractIntDAFSA;
 import name.kazennikov.dafsa.IntDAFSAInt;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Activity;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Flow;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Gateway;
 import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.deckfour.xes.model.XAttributeLiteral;
 import org.deckfour.xes.model.XAttributeMap;
@@ -43,6 +46,7 @@ import org.processmining.plugins.petrinet.structuralanalysis.util.SelfLoopTransi
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DecomposingTRImporter extends ImportProcessModel
 {
@@ -136,8 +140,11 @@ public class DecomposingTRImporter extends ImportProcessModel
 
     public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
         this.xLog = xLog;
+
+        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+        diagram = bpmnPreprocessor.preprocessModel(diagram);
         this.modelFSM = createFSMfromBPMN(diagram, null, null);
-        parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
+        parallel = bpmnPreprocessor.getNonTrivialParallelSplits(diagram).size();
         doDecomposition = parallel > 0;
         if(doDecomposition){
             decomposeBpmnDiagramIntoSComponentAutomata(diagram);
@@ -157,7 +164,8 @@ public class DecomposingTRImporter extends ImportProcessModel
         List<ReachabilityGraph> reachabilityGraphs = bpmNtoTSConverter.BPMNtoTSwithScomp(diagram);
         for(var rg: reachabilityGraphs){
             ImportProcessModel importer = new ImportProcessModel();
-            Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
+            Automaton fsm = importer.convertReachabilityGraphToFSM(rg, null, null);
+            //Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
             this.sComponentImporters.add(importer);
             sComponentFSMs.add(fsm);
 

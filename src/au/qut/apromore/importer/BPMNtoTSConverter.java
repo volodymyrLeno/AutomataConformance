@@ -31,6 +31,7 @@ public class BPMNtoTSConverter {
 
     ReachabilityGraph rg;
     BPMNDiagram diagram;
+    HashMap<String, List<String>> artificialGatewaysInfo;
 
     BitSet allowedFlows;
 
@@ -43,9 +44,7 @@ public class BPMNtoTSConverter {
         long start = System.nanoTime();
 
         this.diagram = bpmnPreprocessor.preprocessModel(diagram);
-        labeledFlows = labelFlows(diagram.getFlows());
-        invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
-                collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
+        this.artificialGatewaysInfo = bpmnPreprocessor.getArtificialGatewaysInfo();
 
         var scomps = bpmnPreprocessor.extractScomponents();
         for(var scomp: scomps)
@@ -104,7 +103,7 @@ public class BPMNtoTSConverter {
             rg.addState(marking);
 
             rg.addTransition(initialMarking, marking, startEvent);
-            String label = (startEvent.getLabel() == null || startEvent.getLabel().equals("")) ? "event " + startEvent.getAttributeMap().get("Original id") : startEvent.getLabel();
+            String label = startEvent.getAttributeMap().get("Original id").toString();
             rg.findTransition(initialMarking, marking, startEvent).setLabel(label);
         }
     }
@@ -379,7 +378,7 @@ public class BPMNtoTSConverter {
             }
             else if(isEvent(node)){
                 Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                label = event.getLabel();
+                label = event.getAttributeMap().get("Original id").toString();
                 rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
         }

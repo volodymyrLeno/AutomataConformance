@@ -163,7 +163,7 @@ public class DecomposingConformanceImporter extends ImportProcessModel
 		if(model.endsWith(".bpmn")){
 			BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(fileName)), fileName);
 			this.modelFSM = createFSMfromBPMN(diagram, null, null);
-			parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
+			parallel = new BPMNPreprocessor().getNonTrivialParallelSplits(diagram).size();
 			doDecomposition = parallel > 0;
 			if(doDecomposition) decomposeBpmnDiagramIntoSComponentAutomata(diagram);
 		}
@@ -184,7 +184,7 @@ public class DecomposingConformanceImporter extends ImportProcessModel
 		this.xLog = xLog;
 		this.modelFSM = createFSMfromBPMN(diagram, null, null);
 		BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
-		parallel = bpmnPreprocessor.getNonTrivialAndSplits(diagram).size();
+		parallel = bpmnPreprocessor.getNonTrivialParallelSplits(diagram).size();
 		doDecomposition = parallel > 0;
 		if(doDecomposition){
 			decomposeBpmnDiagramIntoSComponentAutomata(diagram);
