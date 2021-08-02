@@ -80,6 +80,8 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
 
   private HashMap<String, String> idsMapping = new HashMap<>();
 
+  private HashMap<String, List<String>> artificialGatewaysInfo = new HashMap<>();
+
   private Automaton logAutomaton;
 
   private Automaton modelAutomaton;
@@ -137,6 +139,7 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
     modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
     originalModelAutomaton = ipm.originalModelAutomaton;
     idsMapping = ipm.idsMapping;
+    artificialGatewaysInfo = ipm.artificialGatewaysInfo;
     System.out.println(modelAutomaton.eventLabels());
     psp = new PSP(logAutomaton, modelAutomaton);
     calculateOneOptimalAlignmentsWithTRreductionAndTraceEquivalence(stateLimit);
@@ -2692,4 +2695,6 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
   public Automaton getModelAutomaton() { return modelAutomaton; }
 
   public HashMap<String, String> getIdsMapping() { return idsMapping; }
+
+  public HashMap<String, List<String>> getArtificialGatewaysInfo(){ return artificialGatewaysInfo; }
 }

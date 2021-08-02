@@ -17,6 +17,8 @@ public class HybridConformanceChecker {
 
   private PNMatchInstancesRepResult alignmentResult;
 
+  private boolean containsORSplits;
+
   public Map<IntArrayList, AllSyncReplayResult> traceAlignmentsMapping = new UnifiedMap<>();
 
   private int numThreads;
@@ -31,9 +33,22 @@ public class HybridConformanceChecker {
     computeAlignments();
   }
 
+  public HybridConformanceChecker(DecomposingTRImporter importer, boolean containsORSplits) throws IOException{
+    this.decompositions = importer;
+    this.containsORSplits = containsORSplits;
+    computeAlignments();
+  }
+
   public HybridConformanceChecker(DecomposingTRImporter importer, int numThreads) throws IOException {
     this.decompositions = importer;
     this.numThreads = numThreads;
+    computeAlignmentsMT();
+  }
+
+  public HybridConformanceChecker(DecomposingTRImporter importer, boolean containsORSplits, int numThreads) throws IOException{
+    this.decompositions = importer;
+    this.numThreads = numThreads;
+    this.containsORSplits = containsORSplits;
     computeAlignmentsMT();
   }
 
@@ -47,7 +62,7 @@ public class HybridConformanceChecker {
       System.out.println(
           "Avg. Reduction per case: " + df2.format(decompositions.avgReduction) + "; Process model is not concurrent");
     }
-    if (decompositions.applyTRRule && decompositions.applySCompRule) {
+    if (decompositions.applyTRRule && decompositions.applySCompRule && !containsORSplits) {
       System.out.println("Applying TR-SComp");
       MTDecomposingTRConformanceChecker checker = new MTDecomposingTRConformanceChecker(decompositions, numThreads);
       this.alignmentResult = checker.alignmentResult;
@@ -58,7 +73,7 @@ public class HybridConformanceChecker {
           decompositions.modelFSM, Integer.MAX_VALUE, numThreads);
       this.traceAlignmentsMapping = checker.traceAlignmentsMapping;
       this.alignmentResult = checker.resOneOptimal();
-    } else if (decompositions.applySCompRule) {
+    } else if (decompositions.applySCompRule && !containsORSplits) {
       System.out.println("Applying SComp ");
       MultiThreadedDecomposedConformanceChecker checker = new MultiThreadedDecomposedConformanceChecker(
           decompositions.prepareSComp(), numThreads);
@@ -82,7 +97,7 @@ public class HybridConformanceChecker {
     } else {
       log.info("Avg. Reduction per case: {}; Process model is not concurrent", df2.format(decompositions.avgReduction));
     }
-    if (decompositions.applyTRRule && decompositions.applySCompRule) {
+    if (decompositions.applyTRRule && decompositions.applySCompRule && !containsORSplits) {
       System.out.println("Applying TR-SComp");
       DecomposingTRConformanceChecker checker = new DecomposingTRConformanceChecker(decompositions);
       this.alignmentResult = checker.alignmentResult;
@@ -93,7 +108,7 @@ public class HybridConformanceChecker {
           Integer.MAX_VALUE);
       this.traceAlignmentsMapping = checker.traceAlignmentsMapping;
       this.alignmentResult = checker.resOneOptimal();
-    } else if (decompositions.applySCompRule) {
+    } else if (decompositions.applySCompRule && !containsORSplits) {
       log.info("Applying SComp ");
       DecomposingConformanceChecker SComp = new DecomposingConformanceChecker(decompositions.prepareSComp());
       this.alignmentResult = SComp.alignmentResult;

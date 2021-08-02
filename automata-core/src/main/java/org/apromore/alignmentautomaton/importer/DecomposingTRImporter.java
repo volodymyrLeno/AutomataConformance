@@ -178,7 +178,7 @@ public class DecomposingTRImporter extends ImportProcessModel {
   public void importAndDecomposeModelAndLogForConformanceChecking(@NonNull BPMNDiagram diagram, @NonNull XLog xLog) throws Exception{
     this.xLog = xLog;
     this.modelFSM = createFSMfromBPMN(diagram, null, null);
-    parallel = new BPMNPreprocessor().getNonTrivialAndSplits(diagram).size();
+    parallel = new BPMNPreprocessor().getNonTrivialParallelSplits(diagram).size();
     doDecomposition = parallel > 0;
     if(doDecomposition){
       decomposeBpmnDiagramIntoSComponentAutomata(diagram);
@@ -198,7 +198,7 @@ public class DecomposingTRImporter extends ImportProcessModel {
     List<ReachabilityGraph> reachabilityGraphs = bpmNtoTSConverter.BPMNtoTSwithScomp(diagram);
     for(var rg: reachabilityGraphs){
       ImportProcessModel importer = new ImportProcessModel();
-      Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
+      Automaton fsm = importer.convertReachabilityGraphToFSM(rg, null, null);
       this.sComponentImporters.add(importer);
       sComponentFSMs.add(fsm);
 

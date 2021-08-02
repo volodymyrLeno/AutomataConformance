@@ -49,6 +49,8 @@ public class BPMNtoTSConverter {
 
   BPMNDiagram diagram;
 
+  HashMap<String, List<String>> artificialGatewaysInfo = null;
+
   BitSet allowedFlows;
 
   HashMap<ImmutablePair<BPMNNode, BPMNNode>, HashMap<Integer, BitSet>> waitForFlows;
@@ -58,9 +60,7 @@ public class BPMNtoTSConverter {
     BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
 
     this.diagram = bpmnPreprocessor.preprocessModel(diagram);
-    labeledFlows = labelFlows(diagram.getFlows());
-    invertedLabeledFlows = new LinkedHashMap<>(labeledFlows.entrySet().stream().
-        collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey)));
+    this.artificialGatewaysInfo = bpmnPreprocessor.getArtificialGatewaysInfo();
 
     var scomps = bpmnPreprocessor.extractScomponents();
     for(var scomp: scomps)
@@ -391,7 +391,7 @@ public class BPMNtoTSConverter {
       }
       else if(isEvent(node)){
         Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-        label = event.getAttributeMap().get("Original id").toString();
+        label = (event.getLabel() == null || event.getLabel().equals("")) ? "event " + event.getAttributeMap().get("Original id") : event.getLabel();
         rg.findTransition(activeMarking, newMarking, node).setLabel(label);
       }
     }
@@ -649,4 +649,6 @@ public class BPMNtoTSConverter {
 
     return incidenceMatrix;
   }
+
+  public HashMap<String, List<String>> getArtificialGatewaysInfo(){ return this.artificialGatewaysInfo; }
 }

@@ -90,6 +90,8 @@ public class ImportProcessModel {
 
   public HashMap<String, String> idsMapping = new HashMap<>();
 
+  public HashMap<String, List<String>> artificialGatewaysInfo = new HashMap<>();
+
   public BiMap<Integer, String> globalLabelMapping = HashBiMap.create();
 
   public BiMap<String, Integer> globalInverseLabels = HashBiMap.create();
@@ -578,6 +580,7 @@ public class ImportProcessModel {
     BPMNtoTSConverter bpmnToFSMConverter = new BPMNtoTSConverter();
     ReachabilityGraph rg = bpmnToFSMConverter.BPMNtoTS(diagram);
     idsMapping = getIdsMapping(diagram);
+    artificialGatewaysInfo = bpmnToFSMConverter.getArtificialGatewaysInfo();
     modelAutomaton = convertReachabilityGraphToFSM(rg, eventLabelMapping, inverseEventLabelMapping);
     return modelAutomaton;
   }
