@@ -7,6 +7,8 @@ import org.apromore.alignmentautomaton.ScalableConformanceChecker.HybridConforma
 import org.apromore.alignmentautomaton.importer.DecomposingTRImporter;
 import org.apromore.alignmentautomaton.postprocessor.AlignmentPostprocessor;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Flow;
+import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Gateway.GatewayType;
 import org.deckfour.xes.model.XLog;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
@@ -35,11 +37,13 @@ public class HybridAlignmentGenerator implements AlignmentGenerator {
     try {
       DecomposingTRImporter importer = new DecomposingTRImporter();
       importer.importAndDecomposeModelAndLogForConformanceChecking(bpmn, xLog);
-      HybridConformanceChecker checker = new HybridConformanceChecker(importer, NUM_THREADS);
+      boolean containsORSplits = bpmn.getGateways().stream().filter(gateway -> gateway.getGatewayType() == GatewayType.INCLUSIVE &&
+          bpmn.getOutEdges(gateway).stream().filter(edge -> edge instanceof Flow).count() > 1).count() > 0;
+      HybridConformanceChecker checker = new HybridConformanceChecker(importer, containsORSplits, NUM_THREADS);
 
       Map<IntArrayList, AllSyncReplayResult> res = AlignmentPostprocessor
           .computeEnhancedAlignments(checker.traceAlignmentsMapping, importer.originalModelAutomaton,
-              importer.idsMapping);
+              importer.idsMapping, importer.artificialGatewaysInfo);
       return new AlignmentResult(new PNMatchInstancesRepResult(res.values()));
     } catch (Exception ex) {
       throw new AlignmentGenerationException("Internal error generating alignment, cause: " + ex.getMessage(), ex);

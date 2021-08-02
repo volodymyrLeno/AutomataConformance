@@ -50,12 +50,10 @@ public class DecomposingTRConformanceChecker {
 
   public DecomposingTRConformanceChecker(DecomposingTRImporter decompositions) {
     this.decompositions = decompositions;
-    //long start = System.nanoTime();
     if (decompositions.doDecomposition) {
       this.checkConformanceForComponents();
       this.recomposeConformance();
     } else {
-      //System.out.println(decompositions.globalInverseLabels);
       componentAlignments
           .put(0, new TRConformanceChecker(decompositions.dafsa, decompositions.modelFSM, Integer.MAX_VALUE));
       alignmentResult = componentAlignments.get(0).resOneOptimal();

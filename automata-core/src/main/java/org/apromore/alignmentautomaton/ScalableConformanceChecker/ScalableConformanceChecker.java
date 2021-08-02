@@ -84,6 +84,8 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 
   private HashMap<String, String> idsMapping = new HashMap<>();
 
+  private HashMap<String, List<String>> artificialGatewaysInfo = new HashMap<>();
+
   private Automaton logAutomaton;
 
   private Automaton modelAutomaton;
@@ -142,6 +144,7 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
     this.modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
     this.originalModelAutomaton = ipm.originalModelAutomaton;
     this.idsMapping = ipm.idsMapping;
+    this.artificialGatewaysInfo = ipm.artificialGatewaysInfo;
     this.psp = new PSP(logAutomaton, modelAutomaton);
   }
 
@@ -221,6 +224,7 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
     modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
     originalModelAutomaton = ipm.originalModelAutomaton;
     idsMapping = ipm.idsMapping;
+    artificialGatewaysInfo = ipm.artificialGatewaysInfo;
 
     long modelTime = System.currentTimeMillis();
     psp = new PSP(logAutomaton, modelAutomaton);
@@ -1640,4 +1644,6 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
   public Automaton getModelAutomaton() { return modelAutomaton; }
 
   public HashMap<String, String> getIdsMapping() { return idsMapping; }
+
+  public HashMap<String, List<String>> getArtificialGatewaysInfo() { return artificialGatewaysInfo; }
 }
