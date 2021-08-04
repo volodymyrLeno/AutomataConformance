@@ -1,16 +1,16 @@
 package org.apromore.alignment.web.service.alignment;
 
 import java.io.File;
+import java.io.FileInputStream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apromore.alignment.web.service.filestore.InputFileStoreService;
 import org.apromore.alignmentautomaton.AlignmentResult;
 import org.apromore.alignmentautomaton.HybridAlignmentGenerator;
 import org.apromore.alignmentautomaton.importer.ImportEventLog;
-import org.apromore.alignmentautomaton.importer.ImportProcessModel;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.deckfour.xes.model.XLog;
-import org.processmining.models.graphbased.directed.petrinet.Petrinet;
-import org.processmining.models.semantics.petrinet.Marking;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,28 +29,17 @@ public class AlignmentService {
 
     log.info("Generating alignment with files {}, {}", xes.getAbsolutePath(), model.getAbsolutePath());
 
-    Object[] pnetAndM;
-    try {
-      pnetAndM = new ImportProcessModel().importPetriNetAndMarking(model);
-    } catch (Exception e) {
-      e.printStackTrace();
-      throw new IllegalStateException(e);
-    }
-    Petrinet petrinet = (Petrinet) pnetAndM[0];
-    Marking markings = (Marking) pnetAndM[1];
-
-    log.debug("Imported model");
-
+    BPMNDiagram bpmn;
     XLog xLog;
     try {
+      bpmn = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(modelFileName), modelFileName);
       xLog = new ImportEventLog().importEventLog(xes);
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Error importing files: {}", e.getMessage(), e);
       throw new IllegalStateException(e);
     }
 
-    log.debug("Imported log");
-
-    return hybridAlignmentGenerator.computeAlignment(petrinet, markings, xLog);
+    log.debug("Imported model and log");
+    return hybridAlignmentGenerator.computeAlignment(bpmn, xLog);
   }
 }

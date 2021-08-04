@@ -16,4 +16,12 @@ dependencies {
     implementation project(':alignment-common')
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation files('../Libraries/PNetReplayer.jar')
+
+    // BPMN
+    implementation files('../Libraries/prom-bpmn-osgi-1.0.jar')
+    implementation files('../Libraries/prom-models-osgi-1.0.jar')
+
+    // XES log
+    implementation files('../Libraries/OpenXES-20160212.jar')
+    implementation files('../Libraries/OpenXES-XStream-20160212.jar')
 }
