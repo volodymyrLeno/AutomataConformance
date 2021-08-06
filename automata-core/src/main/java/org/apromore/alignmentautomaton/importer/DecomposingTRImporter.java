@@ -198,7 +198,7 @@ public class DecomposingTRImporter extends ImportProcessModel {
     List<ReachabilityGraph> reachabilityGraphs = bpmNtoTSConverter.BPMNtoTSwithScomp(diagram);
     for(var rg: reachabilityGraphs){
       ImportProcessModel importer = new ImportProcessModel();
-      Automaton fsm = importer.convertReachabilityGraphToFSM(rg, null, null);
+      Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
       this.sComponentImporters.add(importer);
       sComponentFSMs.add(fsm);
 

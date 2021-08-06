@@ -21,27 +21,27 @@ class HybridAlignmentGeneratorTest {
 
   @Test
   void computeAlignmentHospitalBillingBPMN() throws Exception {
-    runTestBPNM("Hospital_Billing.xes.gz", "Hospital_Billing.bpmn", "build/hb.json");
+    runTestBPMN("Hospital_Billing.xes.gz", "Hospital_Billing.bpmn", "build/hb.json", 4);
   }
 
   @Test
   @Disabled
   void loan() throws Exception {
-    runTestBPNM("loan.xes.gz", "loan.bpmn", "build/loan.json");
+    runTestBPMN("loan.xes.gz", "loan.bpmn", "build/loan.json", 4);
   }
 
   @Test
-  void simpleBPNM() throws Exception {
-    runTestBPNM("simple.xes", "simple.bpmn", "build/simple.json");
+  void simpleBPMN() throws Exception {
+    runTestBPMN("simple.xes", "simple.bpmn", "build/simple.json", 4);
   }
 
-  private void runTestBPNM(final String xesF, final String modelF, String output) throws Exception {
+  private void runTestBPMN(final String xesF, final String modelF, String output, final int maxFanout) throws Exception {
     File xes = new File(Resources.getResource("fixtures/" + xesF).getFile());
     File modelFile = new File(Resources.getResource("fixtures/" + modelF).getFile());
 
     XLog xLog = new ImportEventLog().importEventLog(xes);
     BPMNDiagram bpmn = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(modelFile), modelF);
-    AlignmentResult alignmentResult = new HybridAlignmentGenerator().computeAlignment(bpmn, xLog);
+    AlignmentResult alignmentResult = new HybridAlignmentGenerator().computeAlignment(bpmn, xLog, maxFanout);
 
     try (BufferedWriter w = new BufferedWriter(new FileWriter(output))) {
       mapper.writeValue(w, alignmentResult);

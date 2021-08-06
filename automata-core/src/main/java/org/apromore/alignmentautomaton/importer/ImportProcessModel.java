@@ -670,10 +670,6 @@ public class ImportProcessModel {
         String tLabel = t.getLabel();
 
         if ((rkey = this.globalInverseLabels.get(tLabel)) == null) {
-          if (tLabel.startsWith("gateway") && !tauIdxs.contains(iEvent)) {
-            tauIdxs.add(iEvent);
-          }
-
           rkey = iEvent;
           this.globalInverseLabels.put(tLabel, iEvent);
           iEvent++;
@@ -699,6 +695,11 @@ public class ImportProcessModel {
         originalSource.outgoingTransitions().add(originalTransition);
         originalTarget.incomingTransitions().add(originalTransition);
       }
+    }
+
+    for(Map.Entry<String, Integer> entry: globalInverseLabels.entrySet()){
+      if(entry.getKey().startsWith("gateway "))
+        tauIdxs.add(entry.getValue());
     }
 
     this.eventLabelMapping = HashBiMap.create(this.globalInverseLabels.inverse());
