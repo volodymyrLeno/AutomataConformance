@@ -1,20 +1,21 @@
 package au.qut.apromore.ScalableConformanceChecker;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import au.qut.apromore.PetriNet.PetriNet;
+import au.qut.apromore.importer.BPMNPreprocessor;
 import au.qut.apromore.importer.DecodeTandemRepeats;
 import au.qut.apromore.psp.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.codehaus.jackson.map.DeserializerFactory;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
+import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
@@ -75,6 +76,7 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
         }
     }*/
 
+    private int maxFanout = 4;
     private HashMap<String, String> idsMapping = new HashMap<>();
     private HashMap<String, List<String>> artificialGatewaysInfo = new HashMap<>();
     private Automaton logAutomaton;
@@ -106,15 +108,18 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
     public TRConformanceChecker(String path, String log, String model, int stateLimit) throws Exception {
         long start = System.currentTimeMillis();
         this.logAutomaton = new ImportEventLog().convertLogToAutomatonWithTRFrom(path + "/" + log);
-        System.out.println(logAutomaton.eventLabels());
 
         var ipm = new ImportProcessModel();
-        modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+        BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
+        XLog xlog = new ImportEventLog().importEventLog(path + log);
+        diagram = new BPMNPreprocessor().filterModel(diagram, xlog, maxFanout);
+        modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+
+        //modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
         originalModelAutomaton = ipm.originalModelAutomaton;
         idsMapping = ipm.idsMapping;
         artificialGatewaysInfo = ipm.artificialGatewaysInfo;
 
-        System.out.println(modelAutomaton.eventLabels());
         psp = new PSP(logAutomaton, modelAutomaton);
         calculateOneOptimalAlignmentsWithTRreductionAndTraceEquivalence(stateLimit);
         //calculateOneOptimalAlignmentsWithTandemRepeats(stateLimit);

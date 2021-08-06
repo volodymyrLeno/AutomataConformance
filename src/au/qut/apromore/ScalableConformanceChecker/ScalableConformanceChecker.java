@@ -1,17 +1,18 @@
 package au.qut.apromore.ScalableConformanceChecker;
 
-import java.io.FileNotFoundException;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
+import au.qut.apromore.importer.BPMNPreprocessor;
 import au.qut.apromore.importer.DecodeTandemRepeats;
 import au.qut.apromore.psp.*;
+import cern.jet.random.Logarithmic;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.reflect.TypeUtilsTest.This;
+import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
+import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.deckfour.xes.model.XLog;
 import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
@@ -78,6 +79,7 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 		}
 	}*/
 
+	private int maxFanout = 4;
 	private HashMap<String, String> idsMapping = new HashMap<>();
 	private HashMap<String, List<String>> artificialGatewaysInfo = new HashMap<>();
 	private Automaton logAutomaton;
@@ -122,10 +124,8 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 	{
 		long start = System.currentTimeMillis();
 		this.logAutomaton = logAutomaton;
-		//System.out.println(logAutomaton.eventLabels());
 		this.modelAutomaton = modelAutomaton;
-		//System.out.println(modelAutomaton.eventLabels());
-		Node source = new Node(logAutomaton.source(), modelAutomaton.source(), 
+		Node source = new Node(logAutomaton.source(), modelAutomaton.source(),
 				new Configuration(new IntArrayList(), new IntIntHashMap(), new IntArrayList(), new IntIntHashMap(), new FastList<au.qut.apromore.psp.Synchronization>(),
 						new IntArrayList(), new IntArrayList()), 0);
 		source.configuration().logIDs().add(logAutomaton.sourceID()); source.configuration().modelIDs().add(modelAutomaton.sourceID());
@@ -172,16 +172,29 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 	public ScalableConformanceChecker(String path, String log, String model, int stateLimit) throws Exception
 	{
 		long start = System.currentTimeMillis();
-		//System.out.println("DAFSA creation");
 		logAutomaton = new ImportEventLog().convertLogToAutomatonFrom(path + log);
 		long logTime = System.currentTimeMillis();
 		this.preperationLog = logTime - start;
 		logTime = System.currentTimeMillis();
-		//System.out.println("FSM creation");
+		System.out.println("Log automaton creation: " + this.preperationLog + "ms");
+		System.out.println("Log automaton states: " + logAutomaton.states().size());
 
 		var ipm = new ImportProcessModel();
-		modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+
+		/*BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
+		XLog xLog = new ImportEventLog().importEventLog(path + log);
+		BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+		BPMNDiagram filteredDiagram = bpmnPreprocessor.filterModel(diagram, xLog, 0.15);
+		modelAutomaton = ipm.createFSMfromBPMN(filteredDiagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());*/
+
+		BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
+		XLog xlog = new ImportEventLog().importEventLog(path + log);
+		diagram = new BPMNPreprocessor().filterModel(diagram, xlog, maxFanout);
+		modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+
+		//modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
 		originalModelAutomaton = ipm.originalModelAutomaton;
+
 		idsMapping = ipm.idsMapping;
 		artificialGatewaysInfo = ipm.artificialGatewaysInfo;
 
@@ -189,8 +202,6 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 		psp = new PSP(logAutomaton,modelAutomaton);
 		this.preperationModel = modelTime - logTime;
 		this.calculateOneOptimalAlignments(stateLimit);
-//		Double time = Double.parseDouble(this.resAllOptimal().getInfo().get(PNRepResult.TIME))  * this.logAutomaton.caseTracesMapping.size();
-//		this.timeOneOptimal = time.intValue();
 		this.timeOneOptimal= System.currentTimeMillis()-modelTime;
 	}
 

@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
 
 public class DecomposingTRImporter extends ImportProcessModel
 {
+    private int maxFanout = 4;
     public Automaton modelFSM;
     public Automaton dafsa;
     private ImportEventLog importer;
@@ -140,11 +141,9 @@ public class DecomposingTRImporter extends ImportProcessModel
 
     public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
         this.xLog = xLog;
-
-        BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
-        diagram = bpmnPreprocessor.preprocessModel(diagram);
+        diagram = new BPMNPreprocessor().filterModel(diagram, xLog, maxFanout);
         this.modelFSM = createFSMfromBPMN(diagram, null, null);
-        parallel = bpmnPreprocessor.getNonTrivialParallelSplits(diagram).size();
+        parallel = new BPMNPreprocessor().getNonTrivialParallelSplits(diagram).size();
         doDecomposition = parallel > 0;
         if(doDecomposition){
             decomposeBpmnDiagramIntoSComponentAutomata(diagram);
@@ -164,8 +163,7 @@ public class DecomposingTRImporter extends ImportProcessModel
         List<ReachabilityGraph> reachabilityGraphs = bpmNtoTSConverter.BPMNtoTSwithScomp(diagram);
         for(var rg: reachabilityGraphs){
             ImportProcessModel importer = new ImportProcessModel();
-            Automaton fsm = importer.convertReachabilityGraphToFSM(rg, null, null);
-            //Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
+            Automaton fsm = importer.convertReachabilityGraphToFSM(rg, globalInverseLabels.inverse(), globalInverseLabels);
             this.sComponentImporters.add(importer);
             sComponentFSMs.add(fsm);
 

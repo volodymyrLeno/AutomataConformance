@@ -10,6 +10,7 @@
       <root url="jar://$PROJECT_DIR$/Libraries/jdom-2.0.6-javadoc.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/widgets-6.5.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/poi-ooxml-schemas-4.1.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Libraries/prom-bpmn-osgi-1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/BasicUtils.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/EfficientStorage.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/activation-1.1.1.jar!/" />
@@ -67,6 +68,7 @@
       <root url="jar://$PROJECT_DIR$/Libraries/kxml2-2.2.3.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/uma 2.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/CNet.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Libraries/slf4j-api-1.7.9.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/ILPMiner.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/colt-1.2.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/weka-dev-3.7.11.jar!/" />
@@ -90,6 +92,7 @@
       <root url="jar://$PROJECT_DIR$/Libraries/OpenXES-XStream-20160212.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/guava-20.0-javadoc.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/fake-context-1.0.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Libraries/prom-models-osgi-1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/eclipse-collections-9.1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/gwt-soyc-vis-2.0.4.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/conversion-1.0.20161111-1.jar!/" />
@@ -102,6 +105,7 @@
       <root url="jar://$PROJECT_DIR$/Libraries/jgoodies-forms-1.4.1.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/eventstr-confchecking-osgi-1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/trove4j-3.0.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Libraries/slf4j-simple-1.7.9.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/eclipse-collections-api-9.1.0.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/commons-lang3-3.5-test-sources.jar!/" />
       <root url="jar://$PROJECT_DIR$/Libraries/poi-ooxml-4.1.2.jar!/" />

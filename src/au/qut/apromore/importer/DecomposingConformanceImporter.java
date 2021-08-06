@@ -54,6 +54,7 @@ import name.kazennikov.dafsa.IntDAFSAInt;
 
 public class DecomposingConformanceImporter extends ImportProcessModel
 {
+	private int maxFanout = 4;
 	public Automaton modelFSM;
 	public Automaton dafsa;
 	private final String conceptname = "concept:name";
@@ -182,6 +183,7 @@ public class DecomposingConformanceImporter extends ImportProcessModel
 
 	public void importAndDecomposeModelAndLogForConformanceChecking(BPMNDiagram diagram, XLog xlog) throws Exception{
 		this.xLog = xLog;
+		diagram = new BPMNPreprocessor().filterModel(diagram, xLog, maxFanout);
 		this.modelFSM = createFSMfromBPMN(diagram, null, null);
 		BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
 		parallel = bpmnPreprocessor.getNonTrivialParallelSplits(diagram).size();

@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="prom-bpmn-osgi-1.0">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../ApromoreCore/Apromore-OSGI-Bundles/prom-bpmn-osgi/target/prom-bpmn-osgi-1.0.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

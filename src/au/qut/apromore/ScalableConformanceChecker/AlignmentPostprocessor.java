@@ -167,6 +167,8 @@ public class AlignmentPostprocessor {
             String currentLabel = nodeInstances.get(i).toString();
             if(currentLabel.startsWith("gateway "))
                 nodeInstances.set(i, currentLabel.substring(("gateway ").length()));
+            else if(currentLabel.startsWith("event "))
+                nodeInstances.set(i, currentLabel.substring(("event ").length()));
             else if(idsMapping.containsKey(currentLabel))
                 nodeInstances.set(i, idsMapping.get(currentLabel));
         }

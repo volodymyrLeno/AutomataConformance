@@ -10,11 +10,7 @@
     <orderEntry type="library" name="Libraries" level="project" />
     <orderEntry type="library" name="lib" level="project" />
     <orderEntry type="library" name="ScalableConformance_jar" level="project" />
-    <orderEntry type="library" name="lib1" level="project" />
     <orderEntry type="library" name="lib2" level="project" />
-    <orderEntry type="library" name="prom-bpmn-osgi-1.0" level="project" />
-    <orderEntry type="library" name="prom-models-osgi-1.0" level="project" />
-    <orderEntry type="library" name="slf4j-api-1.7.9" level="project" />
-    <orderEntry type="library" name="slf4j-simple-1.7.9" level="project" />
+    <orderEntry type="library" name="lib1" level="project" />
   </component>
 </module>

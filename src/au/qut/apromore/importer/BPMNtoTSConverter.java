@@ -41,17 +41,15 @@ public class BPMNtoTSConverter {
         List<ReachabilityGraph> reachabilityGraphs = new ArrayList<>();
         BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
 
-        long start = System.nanoTime();
-
         this.diagram = bpmnPreprocessor.preprocessModel(diagram);
         this.artificialGatewaysInfo = bpmnPreprocessor.getArtificialGatewaysInfo();
 
-        var scomps = bpmnPreprocessor.extractScomponents();
+        var scomps = bpmnPreprocessor.extractScomponents(this.diagram);
+
+        System.out.println("S-components: " + scomps.size());
+
         for(var scomp: scomps)
             reachabilityGraphs.add(BPMNtoTS(scomp));
-
-        long end = System.nanoTime();
-        System.out.println("Model automaton creation: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
 
         return reachabilityGraphs;
     }
@@ -103,7 +101,7 @@ public class BPMNtoTSConverter {
             rg.addState(marking);
 
             rg.addTransition(initialMarking, marking, startEvent);
-            String label = startEvent.getAttributeMap().get("Original id").toString();
+            String label = (startEvent.getLabel() == null || startEvent.getLabel().equals("")) ? "event " + startEvent.getAttributeMap().get("Original id") : startEvent.getLabel();
             rg.findTransition(initialMarking, marking, startEvent).setLabel(label);
         }
     }
@@ -378,7 +376,7 @@ public class BPMNtoTSConverter {
             }
             else if(isEvent(node)){
                 Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                label = event.getAttributeMap().get("Original id").toString();
+                label = (event.getLabel() == null || event.getLabel().equals("")) ? "event " + event.getAttributeMap().get("Original id") : event.getLabel();
                 rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
         }
