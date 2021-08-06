@@ -18,10 +18,18 @@ public class HybridAlignmentGenerator implements AlignmentGenerator {
 
   private static final int NUM_THREADS = 4;
 
+  public static final int DEFAULT_MAX_FANOUT = 4;
+
   @Override
-  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog, int maxFanout) {
+  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog) {
+    return computeAlignment(bpmn, xLog, false, DEFAULT_MAX_FANOUT);
+  }
+
+  @Override
+  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog, boolean filterModel,
+      int maxFanout) {
     try {
-      BPMNDiagram filteredModel = new BPMNPreprocessor().filterModel(bpmn, xLog, maxFanout);
+      BPMNDiagram filteredModel = filterModel ? new BPMNPreprocessor().filterModel(bpmn, xLog, maxFanout) : bpmn;
       DecomposingTRImporter importer = new DecomposingTRImporter();
       importer.importAndDecomposeModelAndLogForConformanceChecking(filteredModel, xLog);
       boolean containsORSplits = filteredModel.getGateways().stream().anyMatch(

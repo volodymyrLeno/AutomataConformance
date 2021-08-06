@@ -20,7 +20,11 @@ public class AlignmentService {
 
   private final InputFileStoreService fileStoreService;
 
-  public AlignmentResult runAlignment(String xesFileName, String modelFileName, int maxFanout) {
+  public AlignmentResult runAlignment(String xesFileName, String modelFileName) {
+    return runAlignment(xesFileName, modelFileName, false, HybridAlignmentGenerator.DEFAULT_MAX_FANOUT);
+  }
+
+  public AlignmentResult runAlignment(String xesFileName, String modelFileName, boolean filterModel, int maxFanout) {
 
     HybridAlignmentGenerator hybridAlignmentGenerator = new HybridAlignmentGenerator();
 
@@ -40,6 +44,6 @@ public class AlignmentService {
     }
 
     log.debug("Imported model and log");
-    return hybridAlignmentGenerator.computeAlignment(bpmn, xLog, maxFanout);
+    return hybridAlignmentGenerator.computeAlignment(bpmn, xLog, filterModel, maxFanout);
   }
 }
