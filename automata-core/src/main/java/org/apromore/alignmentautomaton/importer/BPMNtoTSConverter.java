@@ -62,7 +62,7 @@ public class BPMNtoTSConverter {
     this.diagram = bpmnPreprocessor.preprocessModel(diagram);
     this.artificialGatewaysInfo = bpmnPreprocessor.getArtificialGatewaysInfo();
 
-    var scomps = bpmnPreprocessor.extractScomponents();
+    var scomps = bpmnPreprocessor.extractScomponents(this.diagram);
     for(var scomp: scomps)
       reachabilityGraphs.add(BPMNtoTS(scomp));
 

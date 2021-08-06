@@ -21,7 +21,7 @@ public class AlignmentController {
   @PostMapping(RESTEndpointsConfig.ALIGNMENT_PATH)
   @ApiOperation(value = "Generated an alignment from a XES input and a model (BPMN or PNML) file")
   public @ResponseBody
-  AlignmentResult genAlignment(@RequestParam String xesFileName, @RequestParam String modelFileName) throws Exception {
-    return alignmentService.runAlignment(xesFileName, modelFileName);
+  AlignmentResult genAlignment(@RequestParam String xesFileName, @RequestParam String modelFileName, @RequestParam int maxFanout) throws Exception {
+    return alignmentService.runAlignment(xesFileName, modelFileName, maxFanout);
   }
 }

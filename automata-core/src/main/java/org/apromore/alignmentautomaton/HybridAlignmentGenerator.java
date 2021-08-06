@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import org.apromore.alignmentautomaton.ScalableConformanceChecker.HybridConformanceChecker;
+import org.apromore.alignmentautomaton.importer.BPMNPreprocessor;
 import org.apromore.alignmentautomaton.importer.DecomposingTRImporter;
 import org.apromore.alignmentautomaton.postprocessor.AlignmentPostprocessor;
 import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
@@ -18,13 +19,14 @@ public class HybridAlignmentGenerator implements AlignmentGenerator {
   private static final int NUM_THREADS = 4;
 
   @Override
-  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog) {
+  public AlignmentResult computeAlignment(@NonNull BPMNDiagram bpmn, @NonNull XLog xLog, int maxFanout) {
     try {
+      BPMNDiagram filteredModel = new BPMNPreprocessor().filterModel(bpmn, xLog, maxFanout);
       DecomposingTRImporter importer = new DecomposingTRImporter();
-      importer.importAndDecomposeModelAndLogForConformanceChecking(bpmn, xLog);
-      boolean containsORSplits = bpmn.getGateways().stream().filter(
+      importer.importAndDecomposeModelAndLogForConformanceChecking(filteredModel, xLog);
+      boolean containsORSplits = filteredModel.getGateways().stream().anyMatch(
           gateway -> gateway.getGatewayType() == GatewayType.INCLUSIVE
-              && bpmn.getOutEdges(gateway).stream().filter(edge -> edge instanceof Flow).count() > 1).count() > 0;
+              && filteredModel.getOutEdges(gateway).stream().filter(edge -> edge instanceof Flow).count() > 1);
       HybridConformanceChecker checker = new HybridConformanceChecker(importer, containsORSplits, NUM_THREADS);
 
       Map<IntArrayList, AllSyncReplayResult> res = AlignmentPostprocessor

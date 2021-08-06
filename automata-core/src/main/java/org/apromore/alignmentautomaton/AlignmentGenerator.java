@@ -5,5 +5,5 @@ import org.deckfour.xes.model.XLog;
 
 public interface AlignmentGenerator {
 
-  AlignmentResult computeAlignment(BPMNDiagram bpmn, XLog xLog);
+  AlignmentResult computeAlignment(BPMNDiagram bpmn, XLog xLog, int maxFanout);
 }
