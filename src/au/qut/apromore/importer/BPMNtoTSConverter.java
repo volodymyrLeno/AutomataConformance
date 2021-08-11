@@ -101,7 +101,7 @@ public class BPMNtoTSConverter {
             rg.addState(marking);
 
             rg.addTransition(initialMarking, marking, startEvent);
-            String label = (startEvent.getLabel() == null || startEvent.getLabel().equals("")) ? "event " + startEvent.getAttributeMap().get("Original id") : startEvent.getLabel();
+            String label = (startEvent.getLabel() == null || startEvent.getLabel().equals("")) ? "startEvent " + startEvent.getAttributeMap().get("Original id") : startEvent.getLabel();
             rg.findTransition(initialMarking, marking, startEvent).setLabel(label);
         }
     }
@@ -376,7 +376,12 @@ public class BPMNtoTSConverter {
             }
             else if(isEvent(node)){
                 Event event = (Event) rg.findTransition(activeMarking, newMarking, node).getIdentifier();
-                label = (event.getLabel() == null || event.getLabel().equals("")) ? "event " + event.getAttributeMap().get("Original id") : event.getLabel();
+
+                if(isEndEvent(node))
+                    label = (event.getLabel() == null || event.getLabel().equals("")) ? "endEvent " + event.getAttributeMap().get("Original id") : event.getLabel();
+                else
+                    label = (event.getLabel() == null || event.getLabel().equals("")) ? "event " + event.getAttributeMap().get("Original id") : event.getLabel();
+
                 rg.findTransition(activeMarking, newMarking, node).setLabel(label);
             }
         }

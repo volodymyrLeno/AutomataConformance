@@ -386,6 +386,7 @@ public class BPMNPreprocessor {
                     appearances.put(elementLabel, Stream.concat(appearances.get(elementLabel).stream(),
                             Collections.singleton(i).stream()).collect(Collectors.toSet()));
             }
+            System.out.println(i);
         }
         for(Map.Entry<String, Set<Integer>> entry: appearances.entrySet())
             support.put(entry.getKey(), (double) entry.getValue().size()/log.size());

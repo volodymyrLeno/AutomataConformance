@@ -110,12 +110,12 @@ public class TRConformanceChecker implements Callable<TRConformanceChecker> {
         this.logAutomaton = new ImportEventLog().convertLogToAutomatonWithTRFrom(path + "/" + log);
 
         var ipm = new ImportProcessModel();
-        BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
+        /*BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
         XLog xlog = new ImportEventLog().importEventLog(path + log);
         diagram = new BPMNPreprocessor().filterModel(diagram, xlog, maxFanout);
-        modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+        modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());*/
 
-        //modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+        modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
         originalModelAutomaton = ipm.originalModelAutomaton;
         idsMapping = ipm.idsMapping;
         artificialGatewaysInfo = ipm.artificialGatewaysInfo;

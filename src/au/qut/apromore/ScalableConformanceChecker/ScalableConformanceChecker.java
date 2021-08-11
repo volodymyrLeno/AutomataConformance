@@ -182,17 +182,11 @@ public class ScalableConformanceChecker implements Callable<ScalableConformanceC
 		var ipm = new ImportProcessModel();
 
 		/*BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
-		XLog xLog = new ImportEventLog().importEventLog(path + log);
-		BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
-		BPMNDiagram filteredDiagram = bpmnPreprocessor.filterModel(diagram, xLog, 0.15);
-		modelAutomaton = ipm.createFSMfromBPMN(filteredDiagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());*/
-
-		BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
 		XLog xlog = new ImportEventLog().importEventLog(path + log);
 		diagram = new BPMNPreprocessor().filterModel(diagram, xlog, maxFanout);
-		modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+		modelAutomaton = ipm.createFSMfromBPMN(diagram, logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());*/
 
-		//modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
+		modelAutomaton = ipm.createAutomatonFromPNMLorBPMNFile(path + model,logAutomaton.eventLabels(), logAutomaton.inverseEventLabels());
 		originalModelAutomaton = ipm.originalModelAutomaton;
 
 		idsMapping = ipm.idsMapping;

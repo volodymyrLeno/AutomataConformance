@@ -66,8 +66,8 @@ public class Main {
 		String log = "logs/simple.xes";
 		String path = "C:/Volodymyr/TEST/";*/
 
-		String model = "Discovered_Models/production_full.bpmn";
-		String log = "logs/production.xes";
+		String model = "models/multipleStarts.bpmn";
+		String log = "logs/multipleStarts.xes";
 		String path = "C:/Volodymyr/TEST/";
 
 		/*BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();

@@ -3,7 +3,6 @@ package au.qut.apromore.ScalableConformanceChecker;
 import au.qut.apromore.automaton.Automaton;
 import au.qut.apromore.automaton.State;
 import au.qut.apromore.automaton.Transition;
-import org.apromore.processmining.models.graphbased.directed.bpmn.BPMNDiagram;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.replayer.replayresult.AllSyncReplayResult;
@@ -18,14 +17,14 @@ import java.util.stream.Collectors;
 
 public class AlignmentPostprocessor {
 
-    private static List<Integer> gatewayIDs;
+    private static List<Integer> tauIDs;
     private static LinkedHashMap<State, LinkedHashMap<Transition, List<Transition>>> gatewaysInfo;
 
     public static Map<IntArrayList, AllSyncReplayResult> computeEnhancedAlignments(Map<IntArrayList, AllSyncReplayResult> alignments, Automaton originalAutomaton, HashMap<String, String> idsMapping, HashMap<String, List<String>> artificialGatewaysInfo){
         Map<IntArrayList, AllSyncReplayResult> enhancedAlignments = new HashMap<>();
         Map<IntArrayList, AllSyncReplayResult> notParsableAlignments = new HashMap<>();
 
-        getGatewayIds(originalAutomaton);
+        getTauIds(originalAutomaton);
         gatewaysInfo = computeGatewaysInfo(originalAutomaton);
 
         for(Map.Entry<IntArrayList, AllSyncReplayResult> entry : alignments.entrySet()){
@@ -45,7 +44,7 @@ public class AlignmentPostprocessor {
         List<AllSyncReplayResult> enhancedAlignments = new ArrayList<>();
         List<AllSyncReplayResult> notParsableAlignments = new ArrayList<>();
 
-        getGatewayIds(originalAutomaton);
+        getTauIds(originalAutomaton);
         gatewaysInfo = computeGatewaysInfo(originalAutomaton);
 
         for(var alignment : alignments){
@@ -94,7 +93,7 @@ public class AlignmentPostprocessor {
                         var lastTransition = path.pop();
                         avoid.add(lastTransition);
 
-                        if(!gatewayIDs.contains(lastTransition.eventID())){
+                        if(!tauIDs.contains(lastTransition.eventID())){
                             for(int j = i; j >= 0; j--){
                                 stepType = alignment.getStepTypesLst().get(0).get(j);
                                 if(stepType == StepTypes.LMGOOD || stepType == StepTypes.MREAL) {
@@ -136,7 +135,7 @@ public class AlignmentPostprocessor {
                     var gateway = transition.eventID();
                     String move = automaton.eventLabels().get(gateway);
                     nodeInstances.add(move);
-                    stepTypes.add(StepTypes.MREAL);
+                    stepTypes.add(StepTypes.LMGOOD);
 
                     path.push(transition);
                 }
@@ -163,12 +162,31 @@ public class AlignmentPostprocessor {
             }
         }
 
+        if(!nodeInstances.get(0).toString().startsWith("startEvent ")){
+            int i = 1;
+            var node = nodeInstances.get(i);
+            var step = stepTypes.get(i);
+            while(!nodeInstances.get(i).toString().startsWith("startEvent ")){
+                i++;
+                node = nodeInstances.get(i);
+                step = stepTypes.get(i);
+            }
+            nodeInstances.remove(i);
+            nodeInstances.add(0, node);
+            stepTypes.remove(i);
+            stepTypes.add(0, step);
+        }
+
         for(int i = 0; i < nodeInstances.size(); i++){
             String currentLabel = nodeInstances.get(i).toString();
             if(currentLabel.startsWith("gateway "))
                 nodeInstances.set(i, currentLabel.substring(("gateway ").length()));
             else if(currentLabel.startsWith("event "))
                 nodeInstances.set(i, currentLabel.substring(("event ").length()));
+            else if(currentLabel.startsWith("startEvent "))
+                nodeInstances.set(i, currentLabel.substring(("startEvent ").length()));
+            else if(currentLabel.startsWith("endEvent "))
+                nodeInstances.set(i, currentLabel.substring(("endEvent ").length()));
             else if(idsMapping.containsKey(currentLabel))
                 nodeInstances.set(i, idsMapping.get(currentLabel));
         }
@@ -222,7 +240,7 @@ public class AlignmentPostprocessor {
             List<Transition> activePath = queue.poll();
             Transition last = activePath.get(activePath.size() - 1);
 
-            if(!gatewayIDs.contains(last.eventID())){
+            if(!tauIDs.contains(last.eventID())){
                 gateways.put(last, activePath.subList(0, activePath.size() - 1));
             }
 
@@ -248,14 +266,14 @@ public class AlignmentPostprocessor {
         return gateways;
     }
 
-    private static void getGatewayIds(Automaton automaton){
-        gatewayIDs = new ArrayList<>();
+    private static void getTauIds(Automaton automaton){
+        tauIDs = new ArrayList<>();
 
         for (Map.Entry<Integer, String> entry : automaton.eventLabels().entrySet()) {
             var idx = entry.getKey();
             var label = entry.getValue();
-            if(label.startsWith("gateway"))
-                gatewayIDs.add(idx);
+            if(label.startsWith("gateway") || label.startsWith("startEvent ") || label.startsWith("endEvent "))
+                tauIDs.add(idx);
         }
     }
 
