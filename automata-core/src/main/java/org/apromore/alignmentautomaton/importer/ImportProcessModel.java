@@ -698,7 +698,7 @@ public class ImportProcessModel {
     }
 
     for(Map.Entry<String, Integer> entry: globalInverseLabels.entrySet()){
-      if(entry.getKey().startsWith("gateway "))
+      if(entry.getKey().startsWith("gateway ") || entry.getKey().startsWith("startEvent ") || entry.getKey().startsWith("endEvent "))
         tauIdxs.add(entry.getValue());
     }
 
