@@ -2,6 +2,7 @@ package main;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -66,13 +67,13 @@ public class Main {
 		String log = "logs/simple.xes";
 		String path = "C:/Volodymyr/TEST/";*/
 
-		String model = "models/multipleStarts.bpmn";
-		String log = "logs/multipleStarts.xes";
+		String model = "models/simple.bpmn";
+		String log = "logs/simple.xes";
 		String path = "C:/Volodymyr/TEST/";
 
-		/*BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
+		BPMNPreprocessor bpmnPreprocessor = new BPMNPreprocessor();
 		BPMNDiagram diagram = new BpmnImportPlugin().importFromStreamToDiagram(new FileInputStream(new File(path + model)), path + model);
-		bpmnPreprocessor.filterModel(diagram, new ImportEventLog().importEventLog(path + log), 0.05);*/
+		//bpmnPreprocessor.filterModel(diagram, new ImportEventLog().importEventLog(path + log), 0.05);
 
 		//TRConformanceChecker tr = new TRConformanceChecker(path, log, model, Integer.MAX_VALUE);
 		ScalableConformanceChecker confChecker = new ScalableConformanceChecker(path, log, model, Integer.MAX_VALUE);
@@ -92,6 +93,16 @@ public class Main {
         //var enhancedAlignments = AlignmentPostprocessor.computeEnhancedAlignments(confChecker.alignmentResult.stream().collect(Collectors.toList()), confChecker.decompositions.originalModelAutomaton, confChecker.decompositions.idsMapping, confChecker.decompositions.artificialGatewaysInfo);
 		long end = System.nanoTime();
 		System.out.println("Enhanced alignments: " + TimeUnit.MILLISECONDS.convert((end - start), TimeUnit.NANOSECONDS) + "ms");
+
+		var imperfectVariants = enhancedAlignments.values().stream().filter(res -> res.getInfo().
+				get("Trace Fitness") < 1.0).collect(Collectors.toList());
+
+		java.util.List<ConformResult> conformResultList = new ArrayList<>();
+
+		for(var variant: imperfectVariants)
+			conformResultList.add(AlignmentAnalyzer.extractDelta(diagram, variant));
+
+		//AlignmentAnalyzer.extractDelta(diagram, enhancedAlignments);
 
 		//var alignments = confChecker.traceAlignmentsMapping;
 

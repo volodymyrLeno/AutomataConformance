@@ -158,7 +158,7 @@ public class AlignmentPostprocessor {
             var gateways = gatewaysInfo.get(currentState).get(null).stream().map(Transition::eventID).collect(Collectors.toList());
             for(var gateway: gateways){
                 nodeInstances.add(automaton.eventLabels().get(gateway));
-                stepTypes.add(StepTypes.MREAL);
+                stepTypes.add(StepTypes.LMGOOD);
             }
         }
 

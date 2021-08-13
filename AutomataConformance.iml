@@ -12,5 +12,14 @@
     <orderEntry type="library" name="ScalableConformance_jar" level="project" />
     <orderEntry type="library" name="lib2" level="project" />
     <orderEntry type="library" name="lib1" level="project" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.20/lombok-1.18.20.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
