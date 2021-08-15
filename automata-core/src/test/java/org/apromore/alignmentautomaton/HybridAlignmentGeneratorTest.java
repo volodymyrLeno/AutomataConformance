@@ -13,6 +13,7 @@ import org.apromore.processmining.plugins.bpmn.plugins.BpmnImportPlugin;
 import org.deckfour.xes.model.XLog;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class HybridAlignmentGeneratorTest {
 
@@ -35,7 +36,21 @@ class HybridAlignmentGeneratorTest {
     runTestBPMN("simple.xes", "simple.bpmn", "build/simple.json");
   }
 
-  private void runTestBPMN(final String xesF, final String modelF, String output) throws Exception {
+  @Test
+  void fittingTrace() throws Exception{
+    AlignmentResult alignmentResult = runTestBPMN("fittingTrace.xes", "simple.bpmn", "build/simple.json");
+    double traceFitness = alignmentResult.getAlignmentResults().get(0).getInfo().get("Trace Fitness");
+    assertEquals(1.0, traceFitness);
+  }
+
+  @Test
+  void deviatingTrace() throws Exception{
+    AlignmentResult alignmentResult = runTestBPMN("deviatingTrace.xes", "simple.bpmn", "build/simple.json");
+    double traceFitness = alignmentResult.getAlignmentResults().get(0).getInfo().get("Trace Fitness");
+    assert traceFitness < 1.0;
+  }
+
+  private AlignmentResult runTestBPMN(final String xesF, final String modelF, String output) throws Exception {
     File xes = new File(Resources.getResource("fixtures/" + xesF).getFile());
     File modelFile = new File(Resources.getResource("fixtures/" + modelF).getFile());
 
@@ -46,5 +61,7 @@ class HybridAlignmentGeneratorTest {
     try (BufferedWriter w = new BufferedWriter(new FileWriter(output))) {
       mapper.writeValue(w, alignmentResult);
     }
+
+    return alignmentResult;
   }
 }
