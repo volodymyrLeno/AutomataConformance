@@ -9,6 +9,7 @@ import org.apromore.processmining.models.graphbased.directed.bpmn.elements.Flow;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class AlignmentAnalyzer {
@@ -51,15 +52,6 @@ public class AlignmentAnalyzer {
               conformResult.addGrey(flowID);
           }
 
-          /*if(prevStep == StepTypes.LMGOOD){
-            for(var flow: coloredFlows)
-              conformResult.addGreen(flow.getAttributeMap().get("Original id").toString());
-          }
-          else if(prevStep == StepTypes.MREAL){
-            for(var flow: coloredFlows)
-              conformResult.addGrey(flow.getAttributeMap().get("Original id").toString());
-          }*/
-
           activeFlows.removeAll(coloredFlows);
         }
         conformResult.addGreen(move);
@@ -73,10 +65,9 @@ public class AlignmentAnalyzer {
           currentRedSection.setStartPoint(startPoint);
         }
 
-        if (moveNode.isPresent())
-          currentRedSection.addActivity(moveNode.get().getLabel());
-        else
-          currentRedSection.addActivity(move);
+        String label = moveNode.isPresent() ? moveNode.get().getLabel() : move;
+        String id = "node-" + UUID.randomUUID();
+        currentRedSection.addActivity(new ConformanceResult().new RedSection().new RedActivity(id, label));
       }
       else if (moveType == StepType.MREAL) {
         BPMNNode activeNode = prevStep == StepType.L ? lastMatch : prevNode;

@@ -29,10 +29,23 @@ public class ConformanceResult {
     @NonNull
     private String endpoint;
     @NonNull
-    private List<String> activities = new ArrayList();
+    private List<RedActivity> activities = new ArrayList();
 
-    public void addActivity(String activity){ activities.add(activity); }
+    public void addActivity(RedActivity redActivity){ activities.add(redActivity); }
     public void setStartPoint(String startPoint){ this.startPoint = startPoint; }
     public void setEndPoint(String endPoint){ this.endpoint = endPoint; }
+
+    public class RedActivity{
+      @NonNull
+      private String id;
+      @NonNull
+      private String label;
+
+      public RedActivity(String id, String label){
+        this.id = id;
+        this.label = label;
+      }
+    }
+
   }
 }
